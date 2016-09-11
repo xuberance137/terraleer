@@ -66,7 +66,7 @@ def searchLandsat(pathrowWRS):
     end_date = '2016-07-01'
 
     result =[] 
-    for index in range(len(pathrowWRS)):
+    for index in range(TEST_RANGE): # len(pathrowWRS)):
         paths_rows = str(pathrowWRS[index][0]) + ',' + str(pathrowWRS[index][1])
         result.append(s.search(paths_rows=paths_rows, start_date=start_date, end_date=end_date))
         print result[index]
@@ -83,9 +83,19 @@ def downloadLandsat(landsatSceneData):
     print sceneIDList
 
     d = Downloader(download_dir='../data/sceneData')
-    d.download(sceneIDList)
+    files = d.download(sceneIDList)
 
+    return files
 
+def processLandsat(filePaths):
+
+    processPath = []
+    for filePath in filePaths:
+        p = NDVI(path=filePath, dst_path='../data/NDVI')
+        path = p.run()
+        processPath.append(path)
+
+    return processPath
 
 if __name__ == '__main__':
 
@@ -112,9 +122,16 @@ if __name__ == '__main__':
         for item in pathrowWRS:
             print item
 
-    landsatData = searchLandsat(pathrowWRS)
+    #landsatData = searchLandsat(pathrowWRS)
 
-    downloadLandsat(landsatData)
+    #filePaths = downloadLandsat(landsatData)
 
+    filePaths = ['../data/sceneData/LC80270322016172LGN00.tar.bz', '../data/sceneData/LC80280312016179LGN00.tar.bz']
+
+    print filePaths
+
+    processPaths = processLandsat(filePaths)
+
+    print processPaths
 
 
