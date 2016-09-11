@@ -8,7 +8,8 @@ import numpy as np
 from landsat.search import Search
 from landsat.downloader import Downloader, RemoteFileDoesntExist, IncorrectSceneId
 from landsat.settings import GOOGLE_STORAGE, S3_LANDSAT
-
+from landsat.image import Simple, PanSharpen
+from landsat.ndvi import NDVI, NDVIWithManualColorMap
 
 
 TEST_RANGE = 2
@@ -46,7 +47,7 @@ def findPathRow(countyCoord):
     conv = ConvertToWRS()
     pathrowWRS = []
 
-    for index in range(TEST_RANGE): #len(countyCoord)):
+    for index in range(len(countyCoord)):
         pathrow = conv.get_wrs(countyCoord[index][1], countyCoord[index][0])  #converting (lat, lon) to WRS {path, row}
         for item in pathrow: #handling multiple path rows for a given (lat, lon)
             pathrowWRS.append((item['path'], item['row']))
@@ -62,7 +63,7 @@ def searchLandsat(pathrowWRS):
     s = Search()
 
     start_date = '2013-01-01'
-    end_date = '2014-07-01'
+    end_date = '2016-07-01'
 
     result =[] 
     for index in range(len(pathrowWRS)):
@@ -76,7 +77,7 @@ def downloadLandsat(landsatSceneData):
 
     sceneIDList = []
     for item in landsatSceneData:
-        sceneIDList.append(item['results'][0]['sceneID'])
+        sceneIDList.append(str(item['results'][0]['sceneID']))
     
     print 
     print sceneIDList
