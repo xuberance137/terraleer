@@ -63,10 +63,10 @@ def searchLandsat(pathrowWRS):
     s = Search()
 
     start_date = '2013-01-01'
-    end_date = '2016-07-01'
+    end_date = '2016-01-01'
 
     result =[] 
-    for index in range(TEST_RANGE): # len(pathrowWRS)):
+    for index in range(len(pathrowWRS)):
         paths_rows = str(pathrowWRS[index][0]) + ',' + str(pathrowWRS[index][1])
         result.append(s.search(paths_rows=paths_rows, start_date=start_date, end_date=end_date))
         print result[index]
@@ -103,16 +103,18 @@ if __name__ == '__main__':
 
     shapes = sf.shapes()
     countyCoord = [item.bbox for item in shapes]
-
-    x = np.array(countyCoord, np.float)
-    delta_x = x[:,2] - x[:,0]
-    delta_y = x[:,3] - x[:,1]
-
     pathrowWRS = findPathRow(countyCoord)
+    landsatData = searchLandsat(pathrowWRS)
+    filePaths = downloadLandsat(landsatData)
+    processPaths = processLandsat(filePaths)
 
     if DEBUG_PRINT:
-        # for index in range(len(countyCoord)):
-        #     print countyCoord[index]
+        print
+        for index in range(len(countyCoord)):
+            print countyCoord[index]
+        x = np.array(countyCoord, np.float)
+        delta_x = x[:,2] - x[:,0]
+        delta_y = x[:,3] - x[:,1]       
         print
         print "Min longitudinal difference (in deg) : ", delta_x.min()
         print "Max longitudinal difference (in deg) : ", delta_x.max()
@@ -121,17 +123,12 @@ if __name__ == '__main__':
         print
         for item in pathrowWRS:
             print item
+        print 
+        print landsatData
+        print
+        print filePaths
+        print
+        print processPaths
 
-    #landsatData = searchLandsat(pathrowWRS)
-
-    #filePaths = downloadLandsat(landsatData)
-
-    filePaths = ['../data/sceneData/LC80270322016172LGN00.tar.bz', '../data/sceneData/LC80280312016179LGN00.tar.bz']
-
-    print filePaths
-
-    processPaths = processLandsat(filePaths)
-
-    print processPaths
 
 
