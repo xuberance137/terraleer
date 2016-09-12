@@ -14,6 +14,7 @@ from landsat.ndvi import NDVI, NDVIWithManualColorMap
 
 TEST_RANGE = 2
 DEBUG_PRINT = True
+POST_DOWNLOAD = True
 
 # Order preserving unique sequence generation
 def f(seq): 
@@ -75,7 +76,7 @@ def searchLandsat(pathrowWRS):
 
 def downloadLandsat(landsatSceneData):
 
-    sceneIDList = []
+    sceneIDList = ['LC80240312015356LGN00']
     for item in landsatSceneData:
         sceneIDList.append(str(item['results'][0]['sceneID']))
     
@@ -101,34 +102,46 @@ if __name__ == '__main__':
 
     sf = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp")
 
-    shapes = sf.shapes()
-    countyCoord = [item.bbox for item in shapes]
-    pathrowWRS = findPathRow(countyCoord)
-    landsatData = searchLandsat(pathrowWRS)
-    filePaths = downloadLandsat(landsatData)
-    processPaths = processLandsat(filePaths)
+    if POST_DOWNLOAD == False:
+        shapes = sf.shapes()
+        countyCoord = [item.bbox for item in shapes]
+        pathrowWRS = findPathRow(countyCoord)
+        landsatData = searchLandsat(pathrowWRS)
+        filePaths = downloadLandsat(landsatData)
+        processPaths = processLandsat(filePaths)
+    else:
+        filePaths = [ 
+            '../data/sceneData/LC80240312015356LGN00.tar.bz', '../data/sceneData/LC80250322015363LGN00.tar.bz', '../data/sceneData/LC80260322015354LGN00.tar.bz',    
+            '../data/sceneData/LC80270322015361LGN00.tar.bz', '../data/sceneData/LC80280322015352LGN00.tar.bz', '../data/sceneData/LC80250302015363LGN00.tar.bz', 
+            '../data/sceneData/LC80260302015354LGN00.tar.bz', '../data/sceneData/LC80270302015361LGN00.tar.bz', '../data/sceneData/LC80280302015352LGN00.tar.bz',    
+            '../data/sceneData/LC80290302015359LGN00.tar.bz', '../data/sceneData/LC80250312015363LGN00.tar.bz', '../data/sceneData/LC80260312015354LGN00.tar.bz',    
+            '../data/sceneData/LC80270312015361LGN00.tar.bz', '../data/sceneData/LC80280312015352LGN00.tar.bz', '../data/sceneData/LC80290312015359LGN00.tar.bz'
+            ]
+        processPaths = processLandsat(filePaths)      
 
     if DEBUG_PRINT:
-        print
-        for index in range(len(countyCoord)):
-            print countyCoord[index]
-        x = np.array(countyCoord, np.float)
-        delta_x = x[:,2] - x[:,0]
-        delta_y = x[:,3] - x[:,1]       
-        print
-        print "Min longitudinal difference (in deg) : ", delta_x.min()
-        print "Max longitudinal difference (in deg) : ", delta_x.max()
-        print "Min latitudinal difference (in deg)  : ", delta_y.min()
-        print "Max latitudinal difference (in deg)  : ", delta_y.max()
-        print
-        for item in pathrowWRS:
-            print item
-        print 
-        print landsatData
-        print
-        print filePaths
-        print
-        print processPaths
+        if POST_DOWNLOAD == False:        
+            print
+            for index in range(len(countyCoord)):
+                print countyCoord[index]
+            x = np.array(countyCoord, np.float)
+            delta_x = x[:,2] - x[:,0]
+            delta_y = x[:,3] - x[:,1]       
+            print
+            print "Min longitudinal difference (in deg) : ", delta_x.min()
+            print "Max longitudinal difference (in deg) : ", delta_x.max()
+            print "Min latitudinal difference (in deg)  : ", delta_y.min()
+            print "Max latitudinal difference (in deg)  : ", delta_y.max()
+            print
+            for item in pathrowWRS:
+                print item
+            print 
+            print landsatData
+        else:
+            print
+            print filePaths
+            print
+            print processPaths
 
 
 
