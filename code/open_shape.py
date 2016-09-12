@@ -83,7 +83,7 @@ def searchLandsat(pathrowWRS):
     s = Search()
     start_date = '2015-05-01'
     end_date = '2015-08-01'
-    cloud_max = 25.0 #maximum allowed cloud is 5%
+    cloud_max = 30.0 #maximum allowed cloud is 5%
 
     result =[] 
     for index in range(len(pathrowWRS)):
@@ -93,11 +93,15 @@ def searchLandsat(pathrowWRS):
     return result    
 
 def downloadLandsat(landsatSceneData):
+    sceneIDList = []
+    print landsatData
+
     for item in landsatSceneData:
-        if item['results']:
+        print item
+        if item['status'] == 'SUCCESS':
             sceneIDList.append(str(item['results'][0]['sceneID']))
         else:
-            print 'Missing scene bundle identified'
+            print "Missing scene bundle identified."
     
     d = Downloader(download_dir='../data/sceneData')
     files = d.download(sceneIDList)
