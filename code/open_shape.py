@@ -1,5 +1,28 @@
 #!/Users/gopal/projects/harvesting/code/venv/bin/python
 
+"""
+
+Finding relevant satellite scenes based on a collection of shape coordinates
+
+
+Info:
+
+All Landsat scene identifiers are based on the following naming convention: LXSPPPRRRYYYYDDDGSIVV
+where:
+L = Landsat
+X = Sensor
+S = Satellite
+PPP = WRS path
+RRR = WRS row
+YYYY = Year
+DDD = Julian day of year
+GSI = Ground station identifier
+VV = Archive version number
+Examples:
+LC80390222013076EDC00 (Landsat 8 OLI and TIRS)
+"""
+
+
 import shapefile
 import matplotlib
 from get_wrs import ConvertToWRS
@@ -14,7 +37,7 @@ from landsat.ndvi import NDVI, NDVIWithManualColorMap
 
 TEST_RANGE = 2
 DEBUG_PRINT = True
-POST_DOWNLOAD = True
+POST_DOWNLOAD = False
 
 # Order preserving unique sequence generation
 def f(seq): 
@@ -25,8 +48,6 @@ def f(seq):
 def plotCountyMap(countyCoord):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    # rect1 = matplotlib.patches.Rectangle((-200,-100), 400, 200, color='yellow')
-    # ax.add_patch(rect1)
     colors = ['red', 'yellow', 'green', 'blue']
     x = np.array(countyCoord, np.float)
     maxCoord = x.max(axis=0)
@@ -53,43 +74,37 @@ def findPathRow(countyCoord):
         for item in pathrow: #handling multiple path rows for a given (lat, lon)
             pathrowWRS.append((item['path'], item['row']))
     
-    for item in pathrowWRS:    
-        print item
-
+    #find unique (path, row) tuples
     pathrowWRS = list(set(pathrowWRS))
 
     return pathrowWRS
 
 def searchLandsat(pathrowWRS):
     s = Search()
-
-    start_date = '2013-01-01'
-    end_date = '2016-01-01'
+    start_date = '2015-05-01'
+    end_date = '2015-08-01'
+    cloud_max = 25.0 #maximum allowed cloud is 5%
 
     result =[] 
     for index in range(len(pathrowWRS)):
         paths_rows = str(pathrowWRS[index][0]) + ',' + str(pathrowWRS[index][1])
-        result.append(s.search(paths_rows=paths_rows, start_date=start_date, end_date=end_date))
-        print result[index]
+        result.append(s.search(paths_rows=paths_rows, start_date=start_date, end_date=end_date, cloud_max=cloud_max))
 
     return result    
 
 def downloadLandsat(landsatSceneData):
-
-    sceneIDList = ['LC80240312015356LGN00']
     for item in landsatSceneData:
-        sceneIDList.append(str(item['results'][0]['sceneID']))
+        if item['results']:
+            sceneIDList.append(str(item['results'][0]['sceneID']))
+        else:
+            print 'Missing scene bundle identified'
     
-    print 
-    print sceneIDList
-
     d = Downloader(download_dir='../data/sceneData')
     files = d.download(sceneIDList)
 
     return files
 
 def processLandsat(filePaths):
-
     processPath = []
     for filePath in filePaths:
         p = NDVI(path=filePath, dst_path='../data/NDVI')
@@ -102,22 +117,12 @@ if __name__ == '__main__':
 
     sf = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp")
 
-    if POST_DOWNLOAD == False:
-        shapes = sf.shapes()
-        countyCoord = [item.bbox for item in shapes]
-        pathrowWRS = findPathRow(countyCoord)
-        landsatData = searchLandsat(pathrowWRS)
-        filePaths = downloadLandsat(landsatData)
-        processPaths = processLandsat(filePaths)
-    else:
-        filePaths = [ 
-            '../data/sceneData/LC80240312015356LGN00.tar.bz', '../data/sceneData/LC80250322015363LGN00.tar.bz', '../data/sceneData/LC80260322015354LGN00.tar.bz',    
-            '../data/sceneData/LC80270322015361LGN00.tar.bz', '../data/sceneData/LC80280322015352LGN00.tar.bz', '../data/sceneData/LC80250302015363LGN00.tar.bz', 
-            '../data/sceneData/LC80260302015354LGN00.tar.bz', '../data/sceneData/LC80270302015361LGN00.tar.bz', '../data/sceneData/LC80280302015352LGN00.tar.bz',    
-            '../data/sceneData/LC80290302015359LGN00.tar.bz', '../data/sceneData/LC80250312015363LGN00.tar.bz', '../data/sceneData/LC80260312015354LGN00.tar.bz',    
-            '../data/sceneData/LC80270312015361LGN00.tar.bz', '../data/sceneData/LC80280312015352LGN00.tar.bz', '../data/sceneData/LC80290312015359LGN00.tar.bz'
-            ]
-        processPaths = processLandsat(filePaths)      
+    shapes = sf.shapes()
+    countyCoord = [item.bbox for item in shapes]
+    pathrowWRS = findPathRow(countyCoord)
+    landsatData = searchLandsat(pathrowWRS)
+    filePaths = downloadLandsat(landsatData)
+    processPaths = processLandsat(filePaths)      
 
     if DEBUG_PRINT:
         if POST_DOWNLOAD == False:        
@@ -136,6 +141,8 @@ if __name__ == '__main__':
             for item in pathrowWRS:
                 print item
             print 
+            print "Number of satellite scenes : ", len(landsatData)
+            print
             print landsatData
         else:
             print
