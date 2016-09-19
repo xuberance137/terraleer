@@ -13,6 +13,8 @@ import pandas as pd
 import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn import metrics
+from sklearn.cross_validation import train_test_split
 
 RESIZE = 128
 PLOT_ROWS = 10
@@ -96,9 +98,8 @@ def createDataFrame(jsomFileName, yieldValueFileName):
 
 	return df
 
-def createPlots(df):
+def createAnalysisPlots(df):
 	
-	plt.figure()
 	sns.set(color_codes = True)
 	cols = ['mean', 'std deviation', 'max histogram', 'yield']
 	sns.pairplot(df[cols])
@@ -108,9 +109,22 @@ def createPlots(df):
 	sns.set(font_scale = 1.5)
 	hm = sns.heatmap(cm, cbar=True, annot=True, square=True, fmt='.2f', annot_kws={'size':15}, yticklabels=cols, xticklabels=cols)
 
+def createResidualPlots(y_train, y_test, y_train_pred, y_test_pred):
+
+	plt.scatter(y_train_pred, y_train_pred-y_train, c='blue', marker='o', label='Training Data')
+	plt.scatter(y_test_pred, y_test_pred-y_test, c='green', marker='s', label='Test Data')
+
+	plt.xlabel('Predicted Values')
+	plt.ylabel('Residuals')
+	plt.legend(loc='upper left')
+	plt.show()
+
 def createRegressionModel(df):
 
-	X = df[['mean', 'std deviation']].values
+	#X = df[['mean', 'std deviation']].values
+	X1 = df['mean'].values
+	X2 = df['std deviation'].values
+	X = np.vstack((X1, X2)).T
 	y = df['yield'].values 
 	sc_x = StandardScaler()
 	sc_y = StandardScaler()
@@ -119,9 +133,23 @@ def createRegressionModel(df):
 	#print X1
 
 	slr = LinearRegression()
-	slr.fit(X, y)
+	slr.fit(X_std, y_std)
+	y_pred = slr.predict(X_std)
+	
+	X_train, X_test, y_train, y_test = train_test_split(X_std, y_std, test_size=0.3, random_state=0)
+	slr.fit(X_train, y_train)
+	y_train_pred = slr.predict(X_train)
+	y_test_pred = slr.predict(X_test)
+
+	print "Variance : ", metrics.explained_variance_score(y_std, y_pred)
+	print "MSE : ", metrics.mean_squared_error(y_std, y_pred)
+	print "R2 : ", metrics.r2_score(y_std, y_pred)
+	print "MSE Train : ", metrics.mean_squared_error(y_train, y_train_pred)
+	print "MSE Test : ", metrics.mean_squared_error(y_test, y_test_pred)
 	print "Slope : ", slr.coef_
 	print "Intercept : ", slr.intercept_
+
+	createResidualPlots(y_train, y_test, y_train_pred, y_test_pred)
 
 	return slr
 
@@ -195,7 +223,7 @@ if __name__ == '__main__':
 
 	#computeImageStatistics(fileList, sf, jsomFileName)
 	df = createDataFrame(jsomFileName, yieldValueFileName)
-	createPlots(df)
+	# createAnalysisPlots(df)
 
 	model = createRegressionModel(df)
 
