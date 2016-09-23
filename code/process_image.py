@@ -15,12 +15,15 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn import metrics
 from sklearn.cross_validation import train_test_split
+import os
+from subprocess import call
 
 RESIZE = 128
 PLOT_ROWS = 10
 PLOT_COLS = 10
 NUM_BINS = 256
 HIST_SCALE_FAC = 5000000
+
 
 def plotHistograms(fileList, recs, fig):
 
@@ -209,6 +212,29 @@ def computeImageStatistics(fileList, sf, jsomFileName):
 
 	return
 
+def processSceneBundleToVisual(sceneDataPath):
+
+	# f = [x[0] for x in os.walk(sceneDataPath)]
+	# subdirectories = os.listdir(sceneDataPath)
+	
+	d = sceneDataPath
+	subdirectories = filter(lambda x: os.path.isdir(os.path.join(d, x)), os.listdir(d))
+
+	for scene in subdirectories:
+		sceneSource  = '../data/sceneData/' + scene
+		processFolder = '../data/processData/'
+		for band in range(2, 5):
+			argList = '-t_srs EPSG:3857 ' + sceneSource + '/' + scene + '_B' + str(band) + '.TIF ' + processFolder + '/' + scene + '_' +str(band) + '_projected.TIF'   
+			#gdalwarp -t_srs EPSG:3857 ../data/sceneData/LC80250302015139LGN00/LC80250302015139LGN00_B$BAND.TIF $BAND-projected.tif
+			call(["gdalwarp", '-t_srs', 'EPSG:3857', sceneSource + '/' + scene + '_B' + str(band) + '.TIF', processFolder + scene + '_' +str(band) + '_projected.TIF'])
+		#convert -combine {4,3,2}-projected.tif RGB.tif
+		call(['convert', '-combine', processFolder + scene + '_4_projected.TIF', processFolder + scene + '_3_projected.TIF', processFolder + scene + '_2_projected.TIF', processFolder + scene + '_RGB.TIF'])
+		#convert -channel B -gamma 0.925 -channel R -gamma 1.03 -channel RGB -sigmoidal-contrast 50x16% RGB.tif RGB-corrected.tif
+		call(['convert' , '-channel', 'B', '-gamma', '0.925', '-channel', 'R', '-gamma', '1.03', '-channel', 'RGB', '-sigmoidal-contrast', '50x16%', processFolder + scene + '_RGB.TIF', processFolder + scene + '_RGB-corrected.TIF'])
+		#convert -depth 8 RGB-corrected.tif RGB-corrected-8bit.tif
+		call(['convert', '-depth', '8', processFolder + scene + '_RGB-corrected.TIF', processFolder + scene + '_RGB-corrected-8bit.TIF'])
+
+	return subdirectories
 
 if __name__ == '__main__':
 
@@ -222,13 +248,12 @@ if __name__ == '__main__':
 	# plt.show()
 
 	#computeImageStatistics(fileList, sf, jsomFileName)
-	df = createDataFrame(jsomFileName, yieldValueFileName)
+	# df = createDataFrame(jsomFileName, yieldValueFileName)
 	# createAnalysisPlots(df)
+	# model = createRegressionModel(df)
+	# plt.show()
 
-	model = createRegressionModel(df)
-
-
-	plt.show()
+	f = processSceneBundleToVisual('../data/SceneData')
 
 
 
