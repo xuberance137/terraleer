@@ -25,7 +25,7 @@ NUM_BINS = 256
 HIST_SCALE_FAC = 5000000
 
 
-def plotHistograms(fileList, recs, fig):
+def plotHistograms(fileList, sf, fig):
 
 	recs = sf.records()
 
@@ -36,11 +36,11 @@ def plotHistograms(fileList, recs, fig):
 			
 		ima = np.array(im)
 		ima = np.reshape(ima, (1, np.product(ima.shape)))   #ima.ravel()
-		print index, ima.shape
+		# print index, ima.shape
 		hista = np.histogram(ima, bins=NUM_BINS)
 		imMean = np.mean(ima)
 		imStd = np.std(ima)
-		print imMean, imStd
+		# print imMean, imStd
 		# print hista
 		# ax = fig.add_subplot(PLOT_ROWS, PLOT_COLS, index+1)
 		# plt.imshow(img1, cmap='Greys_r')
@@ -236,6 +236,25 @@ def processSceneBundleToVisual(sceneDataPath):
 
 	return subdirectories
 
+
+def plotColorScenes(sceneIDs):
+
+	processFolder = '../data/processData/'
+
+	for index in range(len(sceneIDs)):
+		if index < 16:
+			sceneID = sceneIDs[index]
+			processImage = processFolder + sceneID + '_RGB-corrected-8bit.TIF'
+			im = Image.open(processImage)
+			img = im.resize((RESIZE, RESIZE), Image.ANTIALIAS)
+			plt.subplot(4, 4, index+1)
+			plt.imshow(img)
+			plt.axis("off")
+			plt.title('Scene #' + str(index+1) + ":" + sceneID)
+
+	plt.show()
+
+
 if __name__ == '__main__':
 
 	sf = shapefile.Reader('../data/Shapefile/IOWA_Counties/IOWA_Counties.shp')
@@ -243,9 +262,9 @@ if __name__ == '__main__':
 	jsomFileName = '../data/ImageFileStatistics.json'
 	yieldValueFileName = '../data/YieldByCounty2015.txt'
 
-	# fig = plt.figure()
-	# plotHistograms(fileList, recs, fig)
-	# plt.show()
+	fig = plt.figure()
+	plotHistograms(fileList, sf, fig)
+	plt.show()
 
 	#computeImageStatistics(fileList, sf, jsomFileName)
 	# df = createDataFrame(jsomFileName, yieldValueFileName)
@@ -253,8 +272,9 @@ if __name__ == '__main__':
 	# model = createRegressionModel(df)
 	# plt.show()
 
-	f = processSceneBundleToVisual('../data/SceneData')
-
+	# f = processSceneBundleToVisual('../data/SceneData')
+	#f = ['LC80240312015212LGN00', 'LC80250302015139LGN00', 'LC80250312015203LGN00', 'LC80250322015203LGN00', 'LC80260302015210LGN00', 'LC80260312015210LGN00', 'LC80260322015194LGN00', 'LC80260322015210LGN00', 'LC80270302015201LGN00', 'LC80270312015201LGN00', 'LC80270322015185LGN00', 'LC80280302015160LGN00', 'LC80280312015160LGN00', 'LC80280312015192LGN00', 'LC80280322015192LGN00', 'LC80290302015199LGN00']
+	#plotColorScenes(f)
 
 
 
