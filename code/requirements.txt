@@ -1,0 +1,9 @@
+landsat
+numpy
+pycurl
+requests
+simplejson
+seaborn
+sklearn
+tqdm
+Pillow
