@@ -1,4 +1,5 @@
 landsat-util
+shapefile
 numpy
 pycurl
 requests
