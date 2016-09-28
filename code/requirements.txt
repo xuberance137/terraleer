@@ -1,4 +1,4 @@
-landsat
+landsat-util
 numpy
 pycurl
 requests
