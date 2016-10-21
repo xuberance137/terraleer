@@ -20,6 +20,7 @@ import random
 import requests
 import sklearn
 from sklearn import linear_model
+from sklearn.metrics import accuracy_score, r2_score, mean_absolute_error, median_absolute_error, mean_squared_error
 from scipy.stats.stats import pearsonr
 from pyproj import Proj
 import pickle
@@ -845,6 +846,11 @@ if __name__ == '__main__':
         print label_names, len(label_names)
         print pred_val, len(pred_val)
         print Ndata_2015[1], len(Ndata_2015[1])
+        print 
+        print "R2  : ", r2_score(Ndata_2015[1], pred_val)
+        print "MSE : ", mean_squared_error(Ndata_2015[1], pred_val)
+        print "MAE : ", mean_absolute_error(Ndata_2015[1], pred_val)
+        print 
         plt.figure()
         #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
         #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
