@@ -8,3 +8,7 @@ seaborn
 sklearn
 tqdm
 Pillow
+utm
+mpld3
+jinja2
+pyproj2
