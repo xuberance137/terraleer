@@ -826,10 +826,12 @@ if __name__ == '__main__':
         #Ndata_one_created = Ndayalldata(1,folder)
         #saving data
         #pickle.dump(Ndata_one_created, open('../data/MultivariateModelData-One.p', 'wb'))
+        NUM_SAT_RUNS = 4
         print "Loading data from serialized python object ..."
         #Ndata_one = pickle.load(open('../data/MultivariateModelData-One.p', 'rb'))
         Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
-        Ndata_one = Ndata_all1[1]
+        Ndata_one = Ndata_all1[NUM_SAT_RUNS]
+        print Ndata_one[2]
         # run parameter optimization on single sat pass data returning true on optimal input features
         print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."
         labbool= Derivemodfunc(Ndata_one, func1a, invfunc1a, alp=.00001)
@@ -838,15 +840,17 @@ if __name__ == '__main__':
         #keep only the features in labbool
         Ndata_one_short = keep_Ndata_features(Ndata_one, labbool)
         #separate into 2000-2014 and 2015
-        Ndata_most, Ndata_2015 = split_Ndata_by_year(Ndata_one, 2015)
+        Ndata_most, Ndata_2015 = split_Ndata_by_year(Ndata_one, 2011)
+        Ndata_most1, Ndata_2014 = split_Ndata_by_year(Ndata_one, 2014)
         # get the model
         regmod=trainmodel(Ndata_most, func=func1a, invfunc=invfunc1a, alp= .00001)
         #predict using the model
         pred_val = predict_model(Ndata_2015, regmod, func=func1a, invfunc=invfunc1a)
         print label_names, len(label_names)
-        print pred_val, len(pred_val)
-        print Ndata_2015[1], len(Ndata_2015[1])
+        # print pred_val, len(pred_val)
+        # print Ndata_2015[1], len(Ndata_2015[1])
         print 
+        print "Out of sample, predicting year 2015 "
         print "R2  : ", r2_score(Ndata_2015[1], pred_val)
         print "MSE : ", mean_squared_error(Ndata_2015[1], pred_val)
         print "MAE : ", mean_absolute_error(Ndata_2015[1], pred_val)
@@ -857,7 +861,23 @@ if __name__ == '__main__':
         plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
         plt.plot(Ndata_2015[1], color = 'blue', label = 'Actual Yield')              
         plt.legend()
-        plt.show()
+        pred_val = predict_model(Ndata_2014, regmod, func=func1a, invfunc=invfunc1a)
+        print label_names, len(label_names)
+        # print pred_val, len(pred_val)
+        # print Ndata_2014[1], len(Ndata_2014[1])
+        print 
+        print "In sample, predicting year 2014 "
+        print "R2  : ", r2_score(Ndata_2014[1], pred_val)
+        print "MSE : ", mean_squared_error(Ndata_2014[1], pred_val)
+        print "MAE : ", mean_absolute_error(Ndata_2014[1], pred_val)
+        print 
+        plt.figure()
+        #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
+        #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+        plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
+        plt.plot(Ndata_2014[1], color = 'blue', label = 'Actual Yield')              
+        plt.legend()
+        plt.show()        
 
     else:
 
