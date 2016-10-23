@@ -11,4 +11,4 @@ Pillow
 utm
 mpld3
 jinja2
-pyproj2
+pyproj
