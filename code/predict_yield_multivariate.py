@@ -824,11 +824,11 @@ if __name__ == '__main__':
 
         objects = { 'reg_model': [], }
 
-        JSON_FILE_NAME = '../data/reg_model_performanace.json'
-        NUM_SAT_RUNS = [1, 2, 3, 4, 5] 
-        YEAR_IN = [2011, 2012, 2013, 2014, 2015 ]
-        YEAR_OUT = [2011, 2012, 2013, 2014, 2015 ]
-
+        JSON_FILE_NAME = '../data/RegModelPerformanace.json'
+        NUM_SAT_RUNS = [n for n in range(1, 13)] 
+        YEAR_IN = [n for n in range (2000, 2016)]
+        YEAR_OUT = [n for n in range (2000, 2016)]
+        
         print "Loading data from serialized python object ..."
         #Ndata_one = pickle.load(open('../data/MultivariateModelData-One.p', 'rb'))
         Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))

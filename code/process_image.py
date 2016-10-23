@@ -262,15 +262,15 @@ if __name__ == '__main__':
 	jsomFileName = '../data/ImageFileStatistics.json'
 	yieldValueFileName = '../data/YieldByCounty2015.txt'
 
-	fig = plt.figure()
-	plotHistograms(fileList, sf, fig)
-	plt.show()
+	# fig = plt.figure()
+	# plotHistograms(fileList, sf, fig)
+	# plt.show()
 
 	#computeImageStatistics(fileList, sf, jsomFileName)
-	# df = createDataFrame(jsomFileName, yieldValueFileName)
+	df = createDataFrame(jsomFileName, yieldValueFileName)
 	# createAnalysisPlots(df)
-	# model = createRegressionModel(df)
-	# plt.show()
+	model = createRegressionModel(df)
+	#plt.show()
 
 	# f = processSceneBundleToVisual('../data/SceneData')
 	#f = ['LC80240312015212LGN00', 'LC80250302015139LGN00', 'LC80250312015203LGN00', 'LC80250322015203LGN00', 'LC80260302015210LGN00', 'LC80260312015210LGN00', 'LC80260322015194LGN00', 'LC80260322015210LGN00', 'LC80270302015201LGN00', 'LC80270312015201LGN00', 'LC80270322015185LGN00', 'LC80280302015160LGN00', 'LC80280312015160LGN00', 'LC80280312015192LGN00', 'LC80280322015192LGN00', 'LC80290302015199LGN00']

@@ -35,7 +35,6 @@ from landsat.downloader import Downloader, RemoteFileDoesntExist, IncorrectScene
 from landsat.settings import GOOGLE_STORAGE, S3_LANDSAT
 from landsat.image import Simple, PanSharpen
 from landsat.ndvi import NDVI, NDVIWithManualColorMap
-from landsat.image import Simple, PanSharpen
 
 
 START_DATE = '2015-05-01'
