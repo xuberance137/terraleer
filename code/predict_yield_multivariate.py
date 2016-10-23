@@ -24,9 +24,11 @@ from sklearn.metrics import accuracy_score, r2_score, mean_absolute_error, media
 from scipy.stats.stats import pearsonr
 from pyproj import Proj
 import pickle
+import json
 
 PREDICT_ONE = True
 LIABILITY_PLOT = False
+LOGGING_MODEL_PERF = True
 
 def dmy2doy(day, mon, year):
     """
@@ -818,102 +820,159 @@ if __name__ == '__main__':
 
     folder = '../data/DataParamsB'
 
-    if PREDICT_ONE:
-        #A quick run through of how these work:
-        #First generate Ndata and find out which features matter
-        # single satellite pass data
-        #print "Creating and loading plausible (X, y) training dataset ..."
-        #Ndata_one_created = Ndayalldata(1,folder)
-        #saving data
-        #pickle.dump(Ndata_one_created, open('../data/MultivariateModelData-One.p', 'wb'))
-        NUM_SAT_RUNS = 4
+    if LOGGING_MODEL_PERF:
+
+        objects = { 'reg_model': [], }
+
+        JSON_FILE_NAME = '../data/reg_model_performanace.json'
+        NUM_SAT_RUNS = [1, 2, 3, 4, 5] 
+        YEAR_IN = [2011, 2012, 2013, 2014, 2015 ]
+        YEAR_OUT = [2011, 2012, 2013, 2014, 2015 ]
+
         print "Loading data from serialized python object ..."
         #Ndata_one = pickle.load(open('../data/MultivariateModelData-One.p', 'rb'))
         Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
-        Ndata_one = Ndata_all1[NUM_SAT_RUNS]
-        print Ndata_one[2]
-        # run parameter optimization on single sat pass data returning true on optimal input features
-        print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."
-        labbool= Derivemodfunc(Ndata_one, func1a, invfunc1a, alp=.00001)
-        # get label names of optimal input features
-        label_names = np.array(Ndata_one[4])[labbool]
-        #keep only the features in labbool
-        Ndata_one_short = keep_Ndata_features(Ndata_one, labbool)
-        #separate into 2000-2014 and 2015
-        Ndata_most, Ndata_2015 = split_Ndata_by_year(Ndata_one, 2011)
-        Ndata_most1, Ndata_2014 = split_Ndata_by_year(Ndata_one, 2014)
-        # get the model
-        regmod=trainmodel(Ndata_most, func=func1a, invfunc=invfunc1a, alp= .00001)
-        #predict using the model
-        pred_val = predict_model(Ndata_2015, regmod, func=func1a, invfunc=invfunc1a)
-        print label_names, len(label_names)
-        # print pred_val, len(pred_val)
-        # print Ndata_2015[1], len(Ndata_2015[1])
-        print 
-        print "Out of sample, predicting year 2015 "
-        print "R2  : ", r2_score(Ndata_2015[1], pred_val)
-        print "MSE : ", mean_squared_error(Ndata_2015[1], pred_val)
-        print "MAE : ", mean_absolute_error(Ndata_2015[1], pred_val)
-        print 
-        plt.figure()
-        #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
-        #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
-        plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
-        plt.plot(Ndata_2015[1], color = 'blue', label = 'Actual Yield')              
-        plt.legend()
-        pred_val = predict_model(Ndata_2014, regmod, func=func1a, invfunc=invfunc1a)
-        print label_names, len(label_names)
-        # print pred_val, len(pred_val)
-        # print Ndata_2014[1], len(Ndata_2014[1])
-        print 
-        print "In sample, predicting year 2014 "
-        print "R2  : ", r2_score(Ndata_2014[1], pred_val)
-        print "MSE : ", mean_squared_error(Ndata_2014[1], pred_val)
-        print "MAE : ", mean_absolute_error(Ndata_2014[1], pred_val)
-        print 
-        plt.figure()
-        #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
-        #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
-        plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
-        plt.plot(Ndata_2014[1], color = 'blue', label = 'Actual Yield')              
-        plt.legend()
-        plt.show()        
+
+        for num_sat_runs in NUM_SAT_RUNS:
+            
+            Ndata_one = Ndata_all1[num_sat_runs]
+            # run parameter optimization on single sat pass data returning true on optimal input features
+            print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."
+            labbool= Derivemodfunc(Ndata_one, func1a, invfunc1a, alp=.00001)
+            # get label names of optimal input features
+            label_names = np.array(Ndata_one[4])[labbool]
+            #keep only the features in labbool
+            Ndata_one_short = keep_Ndata_features(Ndata_one, labbool)
+
+            for year_in in YEAR_IN:
+                for year_out in YEAR_OUT:
+                    if year_out != year_in:
+                        print num_sat_runs, year_in, year_out
+                        #separate into in sample and out sample data sets
+                        Ndata_most, Ndata_out = split_Ndata_by_year(Ndata_one, year_out)
+                        Ndata_most1, Ndata_in = split_Ndata_by_year(Ndata_one, year_in)
+                        # get the model
+                        regmod=trainmodel(Ndata_most, func=func1a, invfunc=invfunc1a, alp= .00001)
+                        #predict using the model
+                        pred_val = predict_model(Ndata_out, regmod, func=func1a, invfunc=invfunc1a)
+                        pred_val1 = predict_model(Ndata_in, regmod, func=func1a, invfunc=invfunc1a)
+
+                        objects['reg_model'].append({
+                            'NumberOfSatelliteRuns': num_sat_runs,
+                            'YearIn': year_in,
+                            'YearOut': year_out,
+                            'FeatureLaabels': list(label_names),
+                            'InSampleR2': r2_score(Ndata_in[1], pred_val1),
+                            'InSampleMSE': mean_squared_error(Ndata_in[1], pred_val1),
+                            'InSampleMAE': mean_absolute_error(Ndata_in[1], pred_val1),
+                            'OutSampleR2': r2_score(Ndata_out[1], pred_val),
+                            'OutSampleMSE': mean_squared_error(Ndata_out[1], pred_val),
+                            'OutSampleMAE': mean_absolute_error(Ndata_out[1], pred_val)                                                 
+                        })
+        
+        print "Writing performance data to JSON File ..."
+        with open(JSON_FILE_NAME, 'w') as outfile:
+            json.dump(objects, outfile, sort_keys = True, indent = 4)
+        outfile.close()
 
     else:
 
-        # Ndata_all = [Ndayalldata(i+1,folder) for i in range(13)]
-
-        # pickle.dump(Ndata_all, open('../data/MultivariateModelData-Multiple.p', 'wb'))
-        print "Loading data from serialized python object ..."
-        Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
-
-
-        #derives models for all N , prints the liablity error and Rsq and returns the R sq values as Rsq_all_b for normalization function b
-        labels_all_b = []
-        Rsq_all_b =[]
-        for i in range(len(Ndata_all1)):
-            Ndata=Ndata_all1[i]
-            labels_all_b.append(Derivemodfunc(Ndata, func1b, invfunc1b, alp=.00001))
-            label_names = np.array(Ndata[4])[labels_all_b[i]]
-            Rsq_all_b.append(oneyearoutbylabfunc(Ndata, label_names, 'Predictionsb'+str(i)+'.pdf', func1b, invfunc1b, alp=.00001))
-            print "R2 : ", Rsq_all_b[i]
-            print "Number of Input Params : ", len(labels_all_b[i])
-            print "Input Params : ", labels_all_b[i]
+        if PREDICT_ONE:
+            #A quick run through of how these work:
+            #First generate Ndata and find out which features matter
+            # single satellite pass data
+            #print "Creating and loading plausible (X, y) training dataset ..."
+            #Ndata_one_created = Ndayalldata(1,folder)
+            #saving data
+            #pickle.dump(Ndata_one_created, open('../data/MultivariateModelData-One.p', 'wb'))
+            NUM_SAT_RUNS = 4
+            print "Loading data from serialized python object ..."
+            #Ndata_one = pickle.load(open('../data/MultivariateModelData-One.p', 'rb'))
+            Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
+            Ndata_one = Ndata_all1[NUM_SAT_RUNS]
+            print Ndata_one[2]
+            # run parameter optimization on single sat pass data returning true on optimal input features
+            print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."
+            labbool= Derivemodfunc(Ndata_one, func1a, invfunc1a, alp=.00001)
+            # get label names of optimal input features
+            label_names = np.array(Ndata_one[4])[labbool]
+            #keep only the features in labbool
+            Ndata_one_short = keep_Ndata_features(Ndata_one, labbool)
+            #separate into 2000-2014 and 2015
+            Ndata_most, Ndata_2015 = split_Ndata_by_year(Ndata_one, 2011)
+            Ndata_most1, Ndata_2014 = split_Ndata_by_year(Ndata_one, 2014)
+            # get the model
+            regmod=trainmodel(Ndata_most, func=func1a, invfunc=invfunc1a, alp= .00001)
+            #predict using the model
+            pred_val = predict_model(Ndata_2015, regmod, func=func1a, invfunc=invfunc1a)
+            print label_names, len(label_names)
+            # print pred_val, len(pred_val)
+            # print Ndata_2015[1], len(Ndata_2015[1])
             print 
-
-        #derives models for all N , prints the liablity error and Rsq and returns the R sq values as Rsq_all_a for normalization function a
-        print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."    
-        labels_all_a = []
-        Rsq_all_a =[]
-        for i in range(len(Ndata_all1)):
-            Ndata=Ndata_all1[i]
-            labels_all_a.append(Derivemodfunc(Ndata, func1a, invfunc1a, alp=.00001))
-            label_names = np.array(Ndata[4])[labels_all_a[i]]
-            Rsq_all_a.append(oneyearoutbylabfunc(Ndata, label_names, 'Predictionsa'+str(i)+'.pdf', func1a, invfunc1a, alp=.00001))
-            print "R2 : ", Rsq_all_a[i]
-            print "Number of Input Params : ", len(labels_all_a[i])
-            print "Input Params : ", labels_all_a[i]
+            print "Out of sample, predicting year 2015 "
+            print "R2  : ", r2_score(Ndata_2015[1], pred_val)
+            print "MSE : ", mean_squared_error(Ndata_2015[1], pred_val)
+            print "MAE : ", mean_absolute_error(Ndata_2015[1], pred_val)
             print 
+            plt.figure()
+            #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
+            #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+            plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
+            plt.plot(Ndata_2015[1], color = 'blue', label = 'Actual Yield')              
+            plt.legend()
+            pred_val = predict_model(Ndata_2014, regmod, func=func1a, invfunc=invfunc1a)
+            print label_names, len(label_names)
+            # print pred_val, len(pred_val)
+            # print Ndata_2014[1], len(Ndata_2014[1])
+            print 
+            print "In sample, predicting year 2014 "
+            print "R2  : ", r2_score(Ndata_2014[1], pred_val)
+            print "MSE : ", mean_squared_error(Ndata_2014[1], pred_val)
+            print "MAE : ", mean_absolute_error(Ndata_2014[1], pred_val)
+            print 
+            plt.figure()
+            #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
+            #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+            plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
+            plt.plot(Ndata_2014[1], color = 'blue', label = 'Actual Yield')              
+            plt.legend()
+            plt.show()        
+
+        else:
+
+            # Ndata_all = [Ndayalldata(i+1,folder) for i in range(13)]
+
+            # pickle.dump(Ndata_all, open('../data/MultivariateModelData-Multiple.p', 'wb'))
+            print "Loading data from serialized python object ..."
+            Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
+
+
+            #derives models for all N , prints the liablity error and Rsq and returns the R sq values as Rsq_all_b for normalization function b
+            labels_all_b = []
+            Rsq_all_b =[]
+            for i in range(len(Ndata_all1)):
+                Ndata=Ndata_all1[i]
+                labels_all_b.append(Derivemodfunc(Ndata, func1b, invfunc1b, alp=.00001))
+                label_names = np.array(Ndata[4])[labels_all_b[i]]
+                Rsq_all_b.append(oneyearoutbylabfunc(Ndata, label_names, 'Predictionsb'+str(i)+'.pdf', func1b, invfunc1b, alp=.00001))
+                print "R2 : ", Rsq_all_b[i]
+                print "Number of Input Params : ", len(labels_all_b[i])
+                print "Input Params : ", labels_all_b[i]
+                print 
+
+            #derives models for all N , prints the liablity error and Rsq and returns the R sq values as Rsq_all_a for normalization function a
+            print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."    
+            labels_all_a = []
+            Rsq_all_a =[]
+            for i in range(len(Ndata_all1)):
+                Ndata=Ndata_all1[i]
+                labels_all_a.append(Derivemodfunc(Ndata, func1a, invfunc1a, alp=.00001))
+                label_names = np.array(Ndata[4])[labels_all_a[i]]
+                Rsq_all_a.append(oneyearoutbylabfunc(Ndata, label_names, 'Predictionsa'+str(i)+'.pdf', func1a, invfunc1a, alp=.00001))
+                print "R2 : ", Rsq_all_a[i]
+                print "Number of Input Params : ", len(labels_all_a[i])
+                print "Input Params : ", labels_all_a[i]
+                print 
 
 
     if LIABILITY_PLOT:
