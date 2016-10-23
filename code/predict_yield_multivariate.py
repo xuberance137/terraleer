@@ -25,10 +25,12 @@ from scipy.stats.stats import pearsonr
 from pyproj import Proj
 import pickle
 import json
+import tqdm
 
+RUN_INDIVIDUAL_PRED = False
 PREDICT_ONE = True
 LIABILITY_PLOT = False
-LOGGING_MODEL_PERF = True
+LOGGING_MODEL_PERF = False
 
 def dmy2doy(day, mon, year):
     """
@@ -749,6 +751,51 @@ def predict_model(Ndata, regr, func=dono, invfunc=dono):
     # y_predictions
     return invfunc(regr.predict(Ndata[0]))
 
+def parse_preformance_data(jsomFileName):
+
+    with open(jsomFileName) as jsonFile:    
+        RegModelPerformance = json.load(jsonFile)
+
+    numSat = []
+    inYear = []
+    outYear = []
+    inSampleVal = []
+    outSamepleVal = []
+
+                            # 'NumberOfSatelliteRuns': num_sat_runs,
+                            # 'YearIn': year_in,
+                            # 'YearOut': year_out,
+                            # 'FeatureLaabels': list(label_names),
+                            # 'InSampleR2': InSampleR2,
+                            # 'InSampleMSE': InSampleMSE,
+                            # 'InSampleMAE': InSampleMAE,
+                            # 'OutSampleR2': OutSampleR2,
+                            # 'OutSampleMSE': OutSampleMSE,
+                            # 'OutSampleMAE': OutSampleMAE  
+
+    for index in range(len(RegModelPerformance['reg_model'])):
+        item = RegModelPerformance['reg_model'][index]
+        numSat.append(item['NumberOfSatelliteRuns'])
+        inYear.append(item['YearIn'])
+        outYear.append(item['YearOut'])
+        inSampleVal.append(item['InSampleR2'])
+        outSamepleVal.append(item['OutSampleR2'])
+
+    invalMaxIndex = np.argmax(inSampleVal)
+
+    print len(RegModelPerformance['reg_model'])
+    print invalMaxIndex
+    print numSat[invalMaxIndex], inYear[invalMaxIndex], outYear[invalMaxIndex], inSampleVal[invalMaxIndex]
+
+    plt.figure()
+    plt.plot(inSampleVal)
+    plt.figure()
+    plt.plot(outSamepleVal)
+    plt.show()
+
+    
+
+
 
 if __name__ == '__main__':
 
@@ -817,14 +864,15 @@ if __name__ == '__main__':
     teledf = pd.DataFrame(teledats[0],columns = tnames)
 
     #generates 13 data sets including, for each county and year the amount of data availible after N weeks for N in range(13)+1
-
     folder = '../data/DataParamsB'
+    JSON_FILE_NAME = '../data/RegModelPerformance.json'
+
+    parse_preformance_data(JSON_FILE_NAME)
 
     if LOGGING_MODEL_PERF:
 
         objects = { 'reg_model': [], }
 
-        JSON_FILE_NAME = '../data/RegModelPerformanace.json'
         NUM_SAT_RUNS = [n for n in range(1, 13)] 
         YEAR_IN = [n for n in range (2000, 2016)]
         YEAR_OUT = [n for n in range (2000, 2016)]
@@ -895,7 +943,7 @@ if __name__ == '__main__':
             json.dump(objects, outfile, sort_keys = True, indent = 4)
         outfile.close()
 
-    else:
+    if RUN_INDIVIDUAL_PRED:
 
         if PREDICT_ONE:
             #A quick run through of how these work:
