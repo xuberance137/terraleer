@@ -857,17 +857,37 @@ if __name__ == '__main__':
                         pred_val = predict_model(Ndata_out, regmod, func=func1a, invfunc=invfunc1a)
                         pred_val1 = predict_model(Ndata_in, regmod, func=func1a, invfunc=invfunc1a)
 
+                        #handling NaN, infiinity and large values beyond dtype(float64)
+                        try:
+                            InSampleR2 = r2_score(Ndata_in[1], pred_val1)
+                            InSampleMSE = mean_squared_error(Ndata_in[1], pred_val1),
+                            InSampleMAE = mean_absolute_error(Ndata_in[1], pred_val1)
+                        except ValueError:
+                            print "[In sample Metrics] Value Error Found. Setting to Zero ..."
+                            InSampleR2 = 0
+                            InSampleMSE = 0
+                            InSampleMAE = 0
+                        try:
+                            OutSampleR2 = r2_score(Ndata_out[1], pred_val)
+                            OutSampleMSE = mean_squared_error(Ndata_out[1], pred_val)
+                            OutSampleMAE = mean_absolute_error(Ndata_out[1], pred_val)
+                        except ValueError:
+                            print "[Out sample Metrics] Value Error Found. Setting to Zero ..."
+                            OutSampleR2 = 0
+                            OutSampleMSE = 0
+                            OutSampleMAE = 0
+
                         objects['reg_model'].append({
                             'NumberOfSatelliteRuns': num_sat_runs,
                             'YearIn': year_in,
                             'YearOut': year_out,
                             'FeatureLaabels': list(label_names),
-                            'InSampleR2': r2_score(Ndata_in[1], pred_val1),
-                            'InSampleMSE': mean_squared_error(Ndata_in[1], pred_val1),
-                            'InSampleMAE': mean_absolute_error(Ndata_in[1], pred_val1),
-                            'OutSampleR2': r2_score(Ndata_out[1], pred_val),
-                            'OutSampleMSE': mean_squared_error(Ndata_out[1], pred_val),
-                            'OutSampleMAE': mean_absolute_error(Ndata_out[1], pred_val)                                                 
+                            'InSampleR2': InSampleR2,
+                            'InSampleMSE': InSampleMSE,
+                            'InSampleMAE': InSampleMAE,
+                            'OutSampleR2': OutSampleR2,
+                            'OutSampleMSE': OutSampleMSE,
+                            'OutSampleMAE': OutSampleMAE                                                 
                         })
         
         print "Writing performance data to JSON File ..."
