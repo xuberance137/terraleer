@@ -4,14 +4,63 @@ import pandas as pd
 import numpy as np
 import random
 
+def inshape(ptlat,ptlon,shape):
+    """
+    given a shape object from a shapefile, tests if the point given by ptlat,ptlon is in the shape by drawing a line west and checking how many times it intersects with the shape.
+    
+    Note that this function does not work for shapes near the poles or which cross -180/180 degrees longitude  
+    """
+    # does not behave well near poles!!!
+    pts = shape.points
+    lat=[]
+    lon=[]
+    for pt in pts:
+        lat.append(pt[1])
+        lon.append(pt[0])
+    #finds a bounding box
+    lon_max=max(lon)
+    lon_min=min(lon)
+    lat_max=max(lat)
+    lat_min=min(lat)
+    
+    if lon_min < -170 and lon_max > 170:
+        for i in range(len(pts)):
+            if pts[i][0]<0:
+                pts[i][0] = 360+pts[i]
+    #checks if point is outside of bounding box
+    if (ptlat > lat_max or ptlat < lat_min or
+        ptlon > lon_max or ptlon < lon_min):
+        return 0
+    else:
+        #otherwise for each line, see if the line passes directly west
+        #of the point, if so adds to count
+        count = 0
+        for i in range(len(pts)-1):
+            line=[pts[i][0],pts[i][1],
+                  pts[i+1][0],pts[i+1][1]]
+                  
+            if ((line[1] < ptlat and line[3] > ptlat) or 
+                (line[1] > ptlat and line[3] < ptlat)):
+               frac = (line[1]-ptlat)/(line[1]-line[3])
+               if line[0]+frac*(line[2]-line[0]) > ptlon:
+                    count+=1
+        
+        line=[pts[-1][0],pts[0][1],
+              pts[-1][0],pts[0][1]]                  
+        if line[1] < ptlat and line[3] > ptlat:
+           frac = (line[1]-ptlat)/(line[1]-line[3])
+           if line[0]+frac*(line[2]-line[0]) > ptlon:
+                count+=1
+    #if count is odd the point is inside the shape, if even, outside
+    return count%2
+
 def boundingbox(shp,buff=0):
     """
     returns coordinates of the smallest possible rectangular boundary about a shape
     """
     pts = shp.points
     reved = zip(*pts[::-1])
-    return [min(reved[0]) - buff, max(reved[0]) + buff, 
-            min(reved[1]) - buff, max(reved[1]) + buff]
+    return [min(reved[0]) - buff, max(reved[0]) + buff, min(reved[1]) - buff, max(reved[1]) + buff]
 
 def pt2pixel(lat, lon, tifnames,y):
     """
@@ -30,10 +79,11 @@ def pt2pixel(lat, lon, tifnames,y):
         pixels[i] = rb.ReadAsArray(px,py,1,1)[0][0]
     return pixels[y]
 
-def genpointsinshape(shp, testfunc=False, testval=False, N=100, bbox=False, nyear=2000):
+def genpointsinshape(shp, tifnames, testfunc=False, testval=False, N=100, bbox=False, nyear=2000):
     """
     generates N random points which are inside the given shape.
     If testfunc is true, ensures that the given point has a value of test val in the nyear'th year
+    testval is value of corp type
     """
     ct = 0
     pts=[]
@@ -41,8 +91,8 @@ def genpointsinshape(shp, testfunc=False, testval=False, N=100, bbox=False, nyea
         bbox = boundingbox(shp,buff=0)
     okpt = True
     while ct < N:
-        x,y = (random.uniform(bbox[0],bbox[1]), 
-               random.uniform(bbox[2],bbox[3]))
+        #random.seed(5000)
+        x,y = (random.uniform(bbox[0],bbox[1]), random.uniform(bbox[2],bbox[3]))
         if testfunc!=False:
             okpt = pt2pixel(y,x,tifnames,nyear-2000)==testval
         if inshape(y,x,shp) and okpt:
@@ -50,49 +100,53 @@ def genpointsinshape(shp, testfunc=False, testval=False, N=100, bbox=False, nyea
             ct += 1
     return pts
 
-def builddatasets():
+
+def genimagesamplepoints(shp, tifnames, testfunc=False, testval=False, N=100, bbox=False, nyear=2000):
     """
-    takes all of the data for all of the counties per each year,
-    samples weather and reflectivity data at 100 points where there 
-    is corn, averages it and puts it into a file by county by year
-    
-    This should be run once as it takes up to a day to run!
-    All data is saved in folder: DataParamsB
+    For each randomly picked point, finding CDL vlaue for that point for each year. Keep iterating till CDL[point] = testval for nyear
+    generates N random points which are inside the given shape.
+    If testfunc is true, ensures that the given point has a value of test val in the nyear'th year
+    test val is the value of the interested crop
     """
-    for i in range(len(iowarecs)):
-        rec = iowarecs[i]
-        cname = rec[5].upper().replace("'"," ")
-        yielddata = countyyield(cname, yieldfile)
-        if len(yielddata)<16:
-            print cname + ': no data found in ' + yieldfile
-        for y in range(16):
-            year=2000+y
-            rpts = genpointsinshape(iowashapes[i], testfunc=False, testval=1, N=100, bbox=False, nyear = year)
-            plotshapes([iowashapes[i]])
-            plotpoints(rpts)
-            pcounts = {}
-            mdat=[]
-            pixels = getMODpix(year,doy,rpts)
-            for pt in rpts:
-                latag = str(int(np.floor(pt[1])))
-                lonag = str(int(np.floor(pt[0])))
-                pkey=latag+"_"+lonag
-                if pkey in pcounts:
-                    pcounts[pkey][2] = pcounts[pkey][2]+1
-                else:
-                    pcounts[pkey] = [pt[0],pt[1],1]
-            N = sum([p[2] for p in pcounts.values()])
-            dfs = []
-            for k in pcounts.keys():
-                ptds = read_agro_point(agfolder, pcounts[k][1], pcounts[k][0])
-                fields = ['INSgd','RAD','T','TMAX','TMIN','RH','RAIN', 'WIND']
-                dfs.append(pd.concat([deres(doy, ptds, fields, np.nanmax, year, 'max', width=8)*1.0*pcounts[k][2]/N, 
-                                     deres(doy, ptds, fields, np.nanmin, year, 'min', width=8)*1.0*pcounts[k][2]/N, 
-                                    deres(doy, ptds, fields, np.nanmean, year, 'mean', width=8)*1.0*pcounts[k][2]/N], axis=1))
-            sdfs= sum(dfs)
-            sdfs = pd.concat([sdfs,pd.DataFrame(pixels.T,columns = ['NDVI', 'EVI', 'RED', 'NIR', 
-                  'BLUE', 'MIR', 'pixrel'])],axis=1)
-            sdfs.to_csv('DataParamsB/'+str(year)+'_'+cname)
+    ct = 0
+    pts=[]
+    if bbox == False:
+        bbox = boundingbox(shp,buff=0)
+    okpt = True
+    random.seed(5000)
+
+    while ct < N:
+
+        x,y = (random.uniform(bbox[0],bbox[1]), random.uniform(bbox[2],bbox[3]))
+        
+        #compare with CDL data
+        if testfunc==True:
+            lat = y
+            lon = x
+            year = nyear-2000
+            pixels = [-1 for i in tifnames]
+            for i in range(len(tifnames)):
+                src_ds = gdal.Open(tifnames[i])
+                rb = src_ds.GetRasterBand(1)
+                # print rb.GetRasterCount() #binding missing
+                gt = src_ds.GetGeoTransform()
+                
+                mx,my=lon, lat  #coord in map units
+                px = int((mx - gt[0]) / gt[1]) #x pixel
+                py = int((my - gt[3]) / gt[5]) #y pixel
+                
+                pixels[i] = rb.ReadAsArray(px,py,1,1)[0][0]
+                #print pixels[i]
+            
+            okpt = (pixels[year] == testval)
+            #print ct, pixels, okpt
+
+        # keep generatng random points till there are N points with test_val(1 for corn) in concerned year and point is in the shape object
+        if inshape(y,x,shp) and okpt:
+            pts.append([x,y])
+            ct += 1
+
+    return pts    
 
 
 def countyyield(NAME):
@@ -148,17 +202,23 @@ if __name__ == '__main__':
     # print df['Year']
     # print len(df['Year'])
 
-    for i in range(len(iowarecs)):
+    tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
+    #tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in [2015]]
+
+    for i in range(1): #range(len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
-        print i, cname
+        #print i, cname
         yielddata = countyyield(cname)
         if len(yielddata)<16:
             print cname + ': no data found in ' + yieldfile
-        for y in range(16):
-            year=2000+y
-            rpts = genpointsinshape(iowashapes[i], testfunc=False, testval=1, N=100, bbox=False, nyear = year)
-
+        # for y in range(16):
+        #     year=2000+y
+        year = 2015
+        #rpts = genpointsinshape(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
+        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
+        #print rpts
+        print "Resulting sample points : ", len(rpts)
 
 
 
