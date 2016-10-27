@@ -753,6 +753,7 @@ def predict_model(Ndata, regr, func=dono, invfunc=dono):
 
 def parse_preformance_data(jsomFileName):
 
+    print "Loading Model Performance data ..."
     with open(jsomFileName) as jsonFile:    
         RegModelPerformance = json.load(jsonFile)
 
@@ -760,18 +761,7 @@ def parse_preformance_data(jsomFileName):
     inYear = []
     outYear = []
     inSampleVal = []
-    outSamepleVal = []
-
-                            # 'NumberOfSatelliteRuns': num_sat_runs,
-                            # 'YearIn': year_in,
-                            # 'YearOut': year_out,
-                            # 'FeatureLaabels': list(label_names),
-                            # 'InSampleR2': InSampleR2,
-                            # 'InSampleMSE': InSampleMSE,
-                            # 'InSampleMAE': InSampleMAE,
-                            # 'OutSampleR2': OutSampleR2,
-                            # 'OutSampleMSE': OutSampleMSE,
-                            # 'OutSampleMAE': OutSampleMAE  
+    outSampleVal = []
 
     for index in range(len(RegModelPerformance['reg_model'])):
         item = RegModelPerformance['reg_model'][index]
@@ -779,21 +769,73 @@ def parse_preformance_data(jsomFileName):
         inYear.append(item['YearIn'])
         outYear.append(item['YearOut'])
         inSampleVal.append(item['InSampleR2'])
-        outSamepleVal.append(item['OutSampleR2'])
+        outSampleVal.append(item['OutSampleR2'])
 
     invalMaxIndex = np.argmax(inSampleVal)
+    outvalMaxIndex = np.argmax(outSampleVal)
 
-    print len(RegModelPerformance['reg_model'])
-    print invalMaxIndex
-    print numSat[invalMaxIndex], inYear[invalMaxIndex], outYear[invalMaxIndex], inSampleVal[invalMaxIndex]
+    # print len(RegModelPerformance['reg_model'])
+    # print invalMaxIndex
+    # print numSat[invalMaxIndex], inYear[invalMaxIndex], outYear[invalMaxIndex], inSampleVal[invalMaxIndex]
+
+    # print
+    # print outSampleVal[outvalMaxIndex]
+
+    # plt.figure()
+    # plt.plot(inSampleVal)
+    # plt.figure()
+    # plt.plot(outSamepleVal)
+    # plt.show()
+    return [numSat[invalMaxIndex], inYear[invalMaxIndex], outYear[invalMaxIndex], inSampleVal[invalMaxIndex]]
+
+def measure_single_model_performance(optimal_data_set):
+    #pickle.dump(Ndata_one_created, open('../data/MultivariateModelData-One.p', 'wb'))
+    NUM_SAT_RUNS = optimal_data_set[0]
+    print "Loading data from serialized python object ..."
+    #Ndata_one = pickle.load(open('../data/MultivariateModelData-One.p', 'rb'))
+    Ndata_all1 = pickle.load(open('../data/MultivariateModelData-Multiple.p', 'rb'))
+    Ndata_one = Ndata_all1[NUM_SAT_RUNS]
+    # run parameter optimization on single sat pass data returning true on optimal input features
+    print "Running Ridge/SBS Regression Model with normalized yield data (Type A) ..."
+    labbool= Derivemodfunc(Ndata_one, func1a, invfunc1a, alp=.00001)
+    # get label names of optimal input features
+    label_names = np.array(Ndata_one[4])[labbool]
+    #keep only the features in labbool
+    Ndata_one_short = keep_Ndata_features(Ndata_one, labbool)
+    #separate into 2000-2014 and 2015
+    Ndata_most, Ndata_out = split_Ndata_by_year(Ndata_one, optimal_data_set[2])
+    Ndata_most1, Ndata_in = split_Ndata_by_year(Ndata_one, optimal_data_set[1])
+    # get the model
+    regmod=trainmodel(Ndata_most, func=func1a, invfunc=invfunc1a, alp= .00001)
+    #predict using the model
+    pred_val = predict_model(Ndata_in, regmod, func=func1a, invfunc=invfunc1a)
+    print label_names, len(label_names)
+    print 
+    print "In sample, predicting year 2014 "
+    print "R2  : ", r2_score(Ndata_in[1], pred_val)
+    print "MSE : ", mean_squared_error(Ndata_in[1], pred_val)
+    print "MAE : ", mean_absolute_error(Ndata_in[1], pred_val)
+    print 
+
+    sorted_index = [i[0] for i in sorted(enumerate(Ndata_in[1]), key=lambda x:x[1])]
 
     plt.figure()
-    plt.plot(inSampleVal)
-    plt.figure()
-    plt.plot(outSamepleVal)
-    plt.show()
+    #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
+    #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+    plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
+    plt.plot(Ndata_in[1], color = 'blue', label = 'Actual Yield')              
+    plt.legend()
 
-    
+    plt.figure()
+    #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
+    #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+    plt.plot([pred_val[sorted_index[n]] for n in range(len(sorted_index))], color = 'red', label = 'Predicted Yield')
+    plt.plot([Ndata_in[1][sorted_index[n]] for n in range(len(sorted_index))], color = 'blue', label = 'Actual Yield')              
+    plt.legend()
+
+    plt.show()  
+
+
 
 
 
@@ -867,7 +909,12 @@ if __name__ == '__main__':
     folder = '../data/DataParamsB'
     JSON_FILE_NAME = '../data/RegModelPerformance.json'
 
-    parse_preformance_data(JSON_FILE_NAME)
+    optimal_data_set = parse_preformance_data(JSON_FILE_NAME)
+
+    #setting to 1 for fast compute
+    optimal_data_set[0] = 1
+    measure_single_model_performance(optimal_data_set)
+
 
     if LOGGING_MODEL_PERF:
 
