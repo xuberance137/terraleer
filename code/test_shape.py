@@ -1,5 +1,17 @@
 import shapefile
 import gdal
+import pandas as pd
+import numpy as np
+import random
+
+def boundingbox(shp,buff=0):
+    """
+    returns coordinates of the smallest possible rectangular boundary about a shape
+    """
+    pts = shp.points
+    reved = zip(*pts[::-1])
+    return [min(reved[0]) - buff, max(reved[0]) + buff, 
+            min(reved[1]) - buff, max(reved[1]) + buff]
 
 def pt2pixel(lat, lon, tifnames,y):
     """
@@ -82,6 +94,22 @@ def builddatasets():
                   'BLUE', 'MIR', 'pixrel'])],axis=1)
             sdfs.to_csv('DataParamsB/'+str(year)+'_'+cname)
 
+
+def countyyield(NAME):
+    """
+    reads the yield values from a given county
+    note that NAME must be all caps and correspond to the names found 
+    in the file
+    """
+    cyield = pd.read_csv('../data/countyyield.csv')
+    cplant = pd.read_csv('../data/cornplanted.csv')
+    pmean = np.mean(cplant.Value[np.logical_and(cplant.County == NAME, cplant.Year>=1990)])
+    countyield = cyield[cyield.County==NAME]
+    countyplant = cplant[np.logical_and(cplant.County == NAME, cplant.Year >= 2000)].Value/pmean
+    return pd.concat([countyield, pd.DataFrame(np.array(countyplant), index=countyield[countyield.Year>=2000].index, columns=['Plant'])], axis=1)
+    #return pd.concat([countyield], axis=1)
+ 
+
 if __name__ == '__main__':
 
     sf1 = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp") #counties in IA
@@ -116,11 +144,15 @@ if __name__ == '__main__':
     # fields = sf.fields
     # print fields
 
+    # df = pd.read_csv('../data/countyyield-2016-2010-monthly.csv')
+    # print df['Year']
+    # print len(df['Year'])
 
     for i in range(len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
-        yielddata = countyyield(cname, yieldfile)
+        print i, cname
+        yielddata = countyyield(cname)
         if len(yielddata)<16:
             print cname + ': no data found in ' + yieldfile
         for y in range(16):
