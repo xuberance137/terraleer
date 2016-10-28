@@ -3,6 +3,7 @@ import gdal
 import pandas as pd
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 def inshape(ptlat,ptlon,shape):
     """
@@ -173,8 +174,7 @@ if __name__ == '__main__':
     #reads the shapefile into shapes and records objects
     shps = sf2.shapes()
     recs = sf2.records()
-
-    #narrows down the shapefile to hold only iowa shapes and records
+    #narrows down the shapefile to hold only IOWA shapes and records
     iowafips = '19'
     iowashapes = []
     iowarecs = []
@@ -184,11 +184,9 @@ if __name__ == '__main__':
             iowarecs.append(recs[i])
 
     sf = sf3
-
     shapes = sf.shapes()
     recs = sf.records()
     countyCoord = [item.bbox for item in shapes]   
-
     # print
     # for index in range(len(countyCoord)):
     #     print index, countyCoord[index]
@@ -202,22 +200,40 @@ if __name__ == '__main__':
     # print df['Year']
     # print len(df['Year'])
 
+    #prototype CDL GEOTIFF file names in data folder
     tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
-    #tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in [2015]]
 
-    for i in range(1): #range(len(iowarecs)):
+    plt.figure()
+    labels = []
+    #yield data for all years for corn in all counties
+    for i in range(5): #len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
         #print i, cname
         yielddata = countyyield(cname)
+        print
+        print i, cname
+        yieldval = zip(yielddata['Year'], yielddata['Value'])
+        print yieldval
         if len(yielddata)<16:
             print cname + ': no data found in ' + yieldfile
-        # for y in range(16):
-        #     year=2000+y
+        print yielddata['Value']
+        plt.plot(yielddata['Value'])
+        labels.append(cname)
+
+    plt.legend(labels)
+    plt.show()
+
+
+
+    #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
+    for i in range(1): #range(len(iowarecs)):
+        # for year in range(2000, 2016):
         year = 2015
         #rpts = genpointsinshape(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
-        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
-        #print rpts
+        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=1000, bbox=False, nyear = year)
+        print
+        print rpts
         print "Resulting sample points : ", len(rpts)
 
 
