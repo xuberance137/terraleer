@@ -5,6 +5,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
+DEBUG_PRINT = False
+
 def inshape(ptlat,ptlon,shape):
     """
     given a shape object from a shapefile, tests if the point given by ptlat,ptlon is in the shape by drawing a line west and checking how many times it intersects with the shape.
@@ -206,24 +208,30 @@ if __name__ == '__main__':
     plt.figure()
     labels = []
     #yield data for all years for corn in all counties
-    for i in range(5): #len(iowarecs)):
+    for i in range(20): #len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
         #print i, cname
         yielddata = countyyield(cname)
-        print
-        print i, cname
+
         yieldval = zip(yielddata['Year'], yielddata['Value'])
-        print yieldval
-        if len(yielddata)<16:
-            print cname + ': no data found in ' + yieldfile
-        print yielddata['Value']
-        plt.plot(yielddata['Value'])
-        labels.append(cname)
 
-    plt.legend(labels)
+        
+        countyYieldData =yielddata['Value'].values.tolist()[::-1]
+        years = [y for y in range(1982, 2016)]
+        if len(countyYieldData) == len(years):
+            plt.plot(years,yielddata['Value'].values.tolist()[::-1])
+            labels.append(cname)
+
+        if DEBUG_PRINT:
+            print
+            print i, cname
+            print yieldval
+            if len(yielddata)<16:
+                print cname + ': no data found in ' + yieldfile
+
+    plt.legend(labels, loc='upper left', ncol=4)
     plt.show()
-
 
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
