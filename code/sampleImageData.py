@@ -153,7 +153,7 @@ def sampleImage(pts, coord, processPath):
         src_ds = gdal.Open(outfile_name)
         rb = src_ds.GetRasterBand(1)
         gt = src_ds.GetGeoTransform()
-        print gt
+        #print gt
 
         # adfGeoTransform[0] /* top left x */
         # adfGeoTransform[1] /* w-e pixel resolution */
@@ -168,7 +168,7 @@ def sampleImage(pts, coord, processPath):
             py = int((my - gt[3]) / gt[5]) #y pixel
             #get value from array as numpy uint8 and covert to int16 value
             pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
-            print pts[index], px, py, pixels[index]
+            #print pts[index], px, py, pixels[index]
 
     return pixels
 
