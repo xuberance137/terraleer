@@ -53,11 +53,6 @@ TEST_RANGE = 2
 DEBUG_PRINT = False
 POST_DOWNLOAD = False
 
-START_DATE = '2015-05-01'
-END_DATE = '2015-08-01'
-CLOUD_MAX = 5.0 #maximum allowed cloud is 5%
-
-
 # Order preserving unique sequence generation
 def f(seq): 
   seen = set()
@@ -114,7 +109,8 @@ def searchLandsat(pathrowWRS, START_DATE, END_DATE, CLOUD_MAX):
 def downloadLandsat(landsatSceneData):
     sceneIDList = []
     #print landsatData
-
+    print "Scenes:", landsatSceneData
+    print "Number of scenes idenitifed : ", len(landsatSceneData)
     for item in landsatSceneData:
         #print item
         if item['status'] == 'SUCCESS':
@@ -123,7 +119,7 @@ def downloadLandsat(landsatSceneData):
             print "Missing scene bundle identified."
     
     d = Downloader(download_dir='../data/sceneData')
-    files = d.download(sceneIDList)
+    files = d.download(sceneIDList, bands=[4,5])
 
     return files
 
@@ -138,36 +134,42 @@ def processLandsat(filePaths):
 
 def sampleImage(pts, coord, processPath):
 
-    # check for sample point locations 
-    for item in pts:
-        if item[0] < coord[0] or item[0] > coord[2] or item[1] < coord[1] or item[1] > coord[3]:
-            print "[ISSUE ALERT] Sample point out of county boundary ..."
+    if processPath == []:
+        print "[ISSUE ALERT] No scenes captured."
+        pixels = []
+    else:
+        # check for sample point locations 
+        for item in pts:
+            if item[0] < coord[0] or item[0] > coord[2] or item[1] < coord[1] or item[1] > coord[3]:
+                print "[ISSUE ALERT] Sample point out of county boundary ...", item[0], coord[0], coord[2],  item[1], coord[1], coord[3]
 
-    # Converting from projected (PROJ4) to latlon (WGS84)
-    infile_name = processPath[0]
-    outfile_name = infile_name[:-4] + '_latlom' + infile_name[-4:]
-    #Reference command line
-    #gdalwarp NDVI_PROJ4.TIF NDVI_WGS84.TIF -t_srs "+proj=longlat +ellps=WGS84"
-    call(["gdalwarp", '-t_srs', '+proj=longlat +ellps=WGS84', infile_name, outfile_name])
-    
-    src_ds = gdal.Open(outfile_name)
-    rb = src_ds.GetRasterBand(1)
-    gt = src_ds.GetGeoTransform()
+        # Converting from projected (PROJ4) to latlon (WGS84)
+        infile_name = processPath[0]
+        outfile_name = infile_name[:-4] + '_latlom' + infile_name[-4:]
+        #Reference command line
+        #gdalwarp NDVI_PROJ4.TIF NDVI_WGS84.TIF -t_srs "+proj=longlat +ellps=WGS84"
+        call(["gdalwarp", '-t_srs', '+proj=longlat +ellps=WGS84', infile_name, outfile_name])
+        
+        src_ds = gdal.Open(outfile_name)
+        rb = src_ds.GetRasterBand(1)
+        gt = src_ds.GetGeoTransform()
+        print gt
 
-    # adfGeoTransform[0] /* top left x */
-    # adfGeoTransform[1] /* w-e pixel resolution */
-    # adfGeoTransform[2] /* 0 */
-    # adfGeoTransform[3] /* top left y */
-    # adfGeoTransform[4] /* 0 */
-    # adfGeoTransform[5] /* n-s pixel resolution (negative value) */
-    pixels = []
-    for index in range(len(pts)):   
-        mx,my = pts[index][0], pts[index][1] #coord in map units
-        px = int((mx - gt[0]) / gt[1]) #x pixel
-        py = int((my - gt[3]) / gt[5]) #y pixel
-        #get value from array as numpy uint8 and covert to int16 value
-        pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
-        #print pts[index], px, py, pixels[index]
+        # adfGeoTransform[0] /* top left x */
+        # adfGeoTransform[1] /* w-e pixel resolution */
+        # adfGeoTransform[2] /* 0 */
+        # adfGeoTransform[3] /* top left y */
+        # adfGeoTransform[4] /* 0 */
+        # adfGeoTransform[5] /* n-s pixel resolution (negative value) */
+        pixels = []
+        for index in range(len(pts)):   
+            mx,my = pts[index][0], pts[index][1] #coord in map units
+            px = int((mx - gt[0]) / gt[1]) #x pixel
+            py = int((my - gt[3]) / gt[5]) #y pixel
+            #get value from array as numpy uint8 and covert to int16 value
+            pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
+            print pts[index], px, py, pixels[index]
+
     return pixels
 
                  
@@ -200,7 +202,7 @@ if __name__ == '__main__':
     objects = { 'pixelData': [] }
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for i in range(len(iowarecs)):
+    for i in range(3,4): #len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
         yieldVals = countyyield(cname)
@@ -209,9 +211,14 @@ if __name__ == '__main__':
             print "Data access for: ", cname, " county ID : ", i, " Year : ", year 
             START_DATE = str(year) + '-05-01'
             END_DATE = str(year) + '-08-01'
-            CLOUD_MAX = 5.0 #maximum allowed cloud is 5%
+            CLOUD_MAX = 10.0 #maximum allowed cloud is 5%
             countyCoordLimited = [countyCoord[i]]
-            yieldValue = yieldVals[year]              
+            try:
+                yieldValue = yieldVals[year]              
+            except KeyError, e:
+                print "Missing yield value. Setting to Zero"
+                yieldValue = 0
+
             print "Generating random sampling points in county ..."
             rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=128, bbox=False, nyear = year)
             print "Computing Path/Row for county ..."
@@ -223,7 +230,7 @@ if __name__ == '__main__':
             print "Processing Landsat Images ..."
             processPaths = processLandsat(filePaths)   
             print "Sampling Image points ..."
-            pixelVals = sampleImage(rpts, countyCoord[0], processPaths)
+            pixelVals = sampleImage(rpts, countyCoord[i], processPaths)
             print "Creating Dictionary ..."
             objects['pixelData'].append({
                 'year': year,
