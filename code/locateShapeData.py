@@ -164,7 +164,13 @@ def countyyield(NAME):
     pmean = np.mean(cplant.Value[np.logical_and(cplant.County == NAME, cplant.Year>=1990)])
     countyield = cyield[cyield.County==NAME]
     countyplant = cplant[np.logical_and(cplant.County == NAME, cplant.Year >= 2000)].Value/pmean
-    return pd.concat([countyield, pd.DataFrame(np.array(countyplant), index=countyield[countyield.Year>=2000].index, columns=['Plant'])], axis=1)
+    yielddata = pd.concat([countyield, pd.DataFrame(np.array(countyplant), index=countyield[countyield.Year>=2000].index, columns=['Plant'])], axis=1)
+    yieldval = zip(yielddata['Year'], yielddata['Value'])
+    dict_val = []
+    for item in yieldval:
+        dict_val.append((np.int16(item[0]).item(), np.float32(item[1]).item()))
+    return dict(dict_val)
+    #dict([('sape', 4139), ('guido', 4127), ('jack', 4098)])    
     #return pd.concat([countyield], axis=1)
  
 

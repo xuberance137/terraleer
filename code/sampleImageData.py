@@ -147,7 +147,7 @@ def sampleImage(pts, coord, processPath):
     infile_name = processPath[0]
     outfile_name = infile_name[:-4] + '_latlom' + infile_name[-4:]
     #Reference command line
-    #gdalwarp ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI_latlon.TIF -t_srs "+proj=longlat +ellps=WGS84"
+    #gdalwarp NDVI_PROJ4.TIF NDVI_WGS84.TIF -t_srs "+proj=longlat +ellps=WGS84"
     call(["gdalwarp", '-t_srs', '+proj=longlat +ellps=WGS84', infile_name, outfile_name])
     
     src_ds = gdal.Open(outfile_name)
@@ -165,8 +165,8 @@ def sampleImage(pts, coord, processPath):
         mx,my = pts[index][0], pts[index][1] #coord in map units
         px = int((mx - gt[0]) / gt[1]) #x pixel
         py = int((my - gt[3]) / gt[5]) #y pixel
-        #pixels.append(rb.ReadAsArray(px,py,1,1)[0][0])
-        pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  #get value from array as numpy uint8 and covert to int16 value
+        #get value from array as numpy uint8 and covert to int16 value
+        pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
         #print pts[index], px, py, pixels[index]
     return pixels
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
 
     # output JSON
-    jsomFileName = '../data/pixelValues.json'
+    jsomFileName = '../data/pixelValues_2015.json'
 
     #reads the shapefile into shapes and records objects
     shps = sf2.shapes()
@@ -197,27 +197,23 @@ if __name__ == '__main__':
             iowarecs.append(recs[i])
     countyCoord = [item.bbox for item in iowashapes]
 
-    #yield data for all years for corn in all counties
-    for i in range(1): #len(iowarecs)):
-        rec = iowarecs[i]
-        cname = rec[5].upper().replace("'"," ")
-        #print i, cname
-        yielddata = countyyield(cname)
-        yieldval = zip(yielddata['Year'], yielddata['Value'])
-
     objects = { 'pixelData': [] }
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for i in range(1): #range(len(iowarecs)):
-        for year in range(2000, 2016): 
+    for i in range(len(iowarecs)):
+        rec = iowarecs[i]
+        cname = rec[5].upper().replace("'"," ")
+        yieldVals = countyyield(cname)
+
+        for year in range(2015, 2016): 
 
             START_DATE = str(year) + '-05-01'
             END_DATE = str(year) + '-08-01'
             CLOUD_MAX = 5.0 #maximum allowed cloud is 5%
-            countyCoordLimited = [countyCoord[i]]              
-            
+            countyCoordLimited = [countyCoord[i]]
+            yieldValue = yieldVals[year]              
             print "Generating random sampling points in county ..."
-            rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
+            rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=512, bbox=False, nyear = year)
             print "Computing Path/Row for county ..."
             pathrowWRS = findPathRow(countyCoordLimited)
             print "Searching for Landsat Images ..." 
@@ -229,15 +225,16 @@ if __name__ == '__main__':
             print "Sampling Image points ..."
             pixelVals = sampleImage(rpts, countyCoord[0], processPaths)
             print "Creating Dictionary ..."
-            print pixelVals, type(pixelVals), type(pixelVals[0])
             objects['pixelData'].append({
                 'year': year,
+                'countyName': cname,
                 'countyId': i,
+                'yield': yieldValue,
                 'samplePoints': rpts,
                 'pixelVals': pixelVals
             })
 
-    print "Writing to JSON"
+    print "Writing to JSON ..."
     with open(jsomFileName, 'w') as outfile:
         json.dump(objects, outfile, sort_keys = True, indent = 4)
     outfile.close()
