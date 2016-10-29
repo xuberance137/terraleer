@@ -173,6 +173,9 @@ if __name__ == '__main__':
     sf2 = shapefile.Reader("../data/cb_2015_us_county_500k/cb_2015_us_county_500k.shp") #counties in US
     sf3 = shapefile.Reader("../data/cb_2015_us_state_500k/cb_2015_us_state_500k.shp") # states
 
+    #prototype CDL GEOTIFF file names in data folder
+    tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
+
     #reads the shapefile into shapes and records objects
     shps = sf2.shapes()
     recs = sf2.records()
@@ -197,13 +200,10 @@ if __name__ == '__main__':
     #     print index, recs[index][0], recs[index][1], str(recs[index][2]), recs[index][3], recs[index][4], str(recs[index][5]).upper(), recs[index][6], recs[index][7], recs[index][8]
     # fields = sf.fields
     # print fields
-
+    # print 
     # df = pd.read_csv('../data/countyyield-2016-2010-monthly.csv')
     # print df['Year']
     # print len(df['Year'])
-
-    #prototype CDL GEOTIFF file names in data folder
-    tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
 
     plt.figure()
     labels = []
@@ -216,7 +216,6 @@ if __name__ == '__main__':
 
         yieldval = zip(yielddata['Year'], yielddata['Value'])
 
-        
         countyYieldData =yielddata['Value'].values.tolist()[::-1]
         years = [y for y in range(1982, 2016)]
         if len(countyYieldData) == len(years):

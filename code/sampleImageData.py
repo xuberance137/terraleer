@@ -20,6 +20,14 @@ GSI = Ground station identifier
 VV = Archive version number
 Examples:
 LC80390222013076EDC00 (Landsat 8 OLI and TIRS)
+
+REF:
+
+GDAL python
+https://pcjericks.github.io/py-gdalogr-cookbook/raster_layers.html
+Obtain Latitude and Longitude from a GeoTIFF File
+http://stackoverflow.com/questions/2922532/obtain-latitude-and-longitude-from-a-geotiff-file
+
 """
 
 
@@ -35,6 +43,9 @@ from landsat.image import Simple, PanSharpen
 from landsat.ndvi import NDVI, NDVIWithManualColorMap
 from locateShapeData import *
 import gdal
+import osr
+import os
+from subprocess import call
 
 TEST_RANGE = 2
 DEBUG_PRINT = False
@@ -131,14 +142,55 @@ def sampleImage(pts, coord, processPath):
         if item[0] < coord[0] or item[0] > coord[2] or item[1] < coord[1] or item[1] > coord[3]:
             print "[ISSUE ALERT] Sample point out of county boundary ..."
 
-    src_ds = gdal.Open(processPath[0])
+    infile_name = '../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF'
+    outfile_name = '../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI_latlon.TIF'
+
+    #gdalwarp ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI_latlon.TIF -t_srs "+proj=longlat +ellps=WGS84"
+
+    call(["gdalwarp", '-t_srs', '+proj=longlat +ellps=WGS84', infile_name, outfile_name])
+    
+    src_ds = gdal.Open(outfile_name)
     rb = src_ds.GetRasterBand(1)
     gt = src_ds.GetGeoTransform()
     
     print rb
     print gt
 
+    #width = src_ds.RasterXSize
+    #height = src_ds.RasterYSize
+
+    # # get old coordinate system
+    # old_cs= osr.SpatialReference()
+    # old_cs.ImportFromWkt(src_ds.GetProjectionRef())
+    # # create the new coordinate system
+    # wgs84_wkt = """
+    # GEOGCS["WGS 84",
+    #     DATUM["WGS_1984",
+    #         SPHEROID["WGS 84",6378137,298.257223563,
+    #             AUTHORITY["EPSG","7030"]],
+    #         AUTHORITY["EPSG","6326"]],
+    #     PRIMEM["Greenwich",0,
+    #         AUTHORITY["EPSG","8901"]],
+    #     UNIT["degree",0.01745329251994328,
+    #         AUTHORITY["EPSG","9122"]],
+    #     AUTHORITY["EPSG","4326"]]"""
+    # new_cs = osr.SpatialReference()
+    # new_cs .ImportFromWkt(wgs84_wkt)
+    # # create a transform object to convert between coordinate systems
+    # transform = osr.CoordinateTransformation(new_cs, old_cs) 
+
+    #get the point to transform, pixel (0,0) in this case
+    # width = src_ds.RasterXSize
+    # height = src_ds.RasterYSize
+    # gt = src_ds.GetGeoTransform()
+    # minx = gt[0]
+    # miny = gt[3] + width*gt[4] + height*gt[5] 
+
+    #get the coordinates in lat long
+    # latlong = transform.TransformPoint(x,y) 
+
     pixels = []
+
 
     # adfGeoTransform[0] /* top left x */
     # adfGeoTransform[1] /* w-e pixel resolution */
@@ -148,10 +200,10 @@ def sampleImage(pts, coord, processPath):
     # adfGeoTransform[5] /* n-s pixel resolution (negative value) */
 
     for index in range(len(pts)):   
-        mx,my = pts[index][0], pts[index][1]  #coord in map units
+        mx,my = pts[index][0], pts[index][1] #transform.TransformPoint(pts[index][0], pts[index][1])  #coord in map units
         px = int((mx - gt[0]) / gt[1]) #x pixel
         py = int((my - gt[3]) / gt[5]) #y pixel
-        pixels.append(0) #rb.ReadAsArray(px,py,1,1)[0][0])
+        pixels.append(rb.ReadAsArray(px,py,1,1)[0][0])
         print pts[index], px, py, pixels[index]
 
                  
@@ -189,7 +241,7 @@ if __name__ == '__main__':
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
     for i in range(1): #range(len(iowarecs)):
         year = 2015
-        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=5, bbox=False, nyear = year)
+        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
         print
         print rpts
         print "Resulting sample points : ", len(rpts)
@@ -206,7 +258,9 @@ if __name__ == '__main__':
     # filePaths = downloadLandsat(landsatData)
     # print "Processing Landsat Images ..."
     # processPaths = processLandsat(filePaths)   
-    processPaths = ['../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF']   
+    
+    # processPaths = ['../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF']  
+    processPaths = ['../data/sceneData/LC80280302015160LGN00/LC80280302015160LGN00_B1.TIF']
     print "Sampling Image points ..."
     sampleImage(rpts, countyCoord[0], processPaths)
 

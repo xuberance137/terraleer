@@ -133,7 +133,7 @@ def genimagesamplepoints(shp, tifnames, testfunc=False, testval=False, N=100, bb
                 rb = src_ds.GetRasterBand(1)
                 # print rb.GetRasterCount() #binding missing
                 gt = src_ds.GetGeoTransform()
-                print gt
+                #print gt
                 
                 mx,my=lon, lat  #coord in map units
                 px = int((mx - gt[0]) / gt[1]) #x pixel
