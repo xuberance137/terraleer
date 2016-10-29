@@ -46,6 +46,7 @@ import gdal
 import osr
 import os
 from subprocess import call
+import json
 
 TEST_RANGE = 2
 DEBUG_PRINT = False
@@ -96,7 +97,7 @@ def findPathRow(countyCoord):
 
     return pathrowWRS
 
-def searchLandsat(pathrowWRS):
+def searchLandsat(pathrowWRS, START_DATE, END_DATE, CLOUD_MAX):
     s = Search()
     start_date = START_DATE
     end_date = END_DATE
@@ -111,10 +112,10 @@ def searchLandsat(pathrowWRS):
 
 def downloadLandsat(landsatSceneData):
     sceneIDList = []
-    print landsatData
+    #print landsatData
 
     for item in landsatSceneData:
-        print item
+        #print item
         if item['status'] == 'SUCCESS':
             sceneIDList.append(str(item['results'][0]['sceneID']))
         else:
@@ -179,6 +180,9 @@ if __name__ == '__main__':
     #prototype CDL GEOTIFF file names in data folder
     tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
 
+    # output JSON
+    jsomFileName = '../data/pixelValues.json'
+
     #reads the shapefile into shapes and records objects
     shps = sf2.shapes()
     recs = sf2.records()
@@ -200,29 +204,45 @@ if __name__ == '__main__':
         yielddata = countyyield(cname)
         yieldval = zip(yielddata['Year'], yielddata['Value'])
 
+    objects = {
+        'pixelData': [],   
+    }
+
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
     for i in range(1): #range(len(iowarecs)):
-        year = 2015
-        rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
-        print
-        print rpts
-        print "Resulting sample points : ", len(rpts)
+        for year in range(2014, 2016): 
+
+            START_DATE = str(year) + '-05-01'
+            END_DATE = str(year) + '-08-01'
+            CLOUD_MAX = 5.0 #maximum allowed cloud is 5%
+            countyCoordLimited = [countyCoord[i]]              
+            
+            print "Generating random sampling points in county ..."
+            rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=100, bbox=False, nyear = year)
+            print "Computing Path/Row for county ..."
+            pathrowWRS = findPathRow(countyCoordLimited)
+            print "Searching for Landsat Images ..." 
+            landsatData = searchLandsat(pathrowWRS, START_DATE, END_DATE, CLOUD_MAX)
+            print "Downloading Landsat Images ..."
+            filePaths = downloadLandsat(landsatData)
+            print "Processing Landsat Images ..."
+            processPaths = processLandsat(filePaths)   
+            print "Sampling Image points ..."
+            pixelVals = sampleImage(rpts, countyCoord[0], processPaths)
+            print "Creating Dictionary ..."
+            objects['pixelData'].append({
+                'year': year,
+                'countyId': i,
+                'samplePoints': rpts,
+                'pixelVal': pixelVals
+            })
+
+    print "Writing to JSON"
+    with open(jsomFileName, 'w') as outfile:
+        json.dump(objects, outfile, sort_keys = True, indent = 4)
+    outfile.close()
 
 
-    countyCoordLimited = []
-    countyCoordLimited.append(countyCoord[0])
-    
-    print "Computing Path/Row for county ..."
-    pathrowWRS = findPathRow(countyCoordLimited)
-    print "Searching for Landsat Images ..." 
-    landsatData = searchLandsat(pathrowWRS)
-    print "Downloading Landsat Images ..."
-    filePaths = downloadLandsat(landsatData)
-    print "Processing Landsat Images ..."
-    processPaths = processLandsat(filePaths)   
-    print "Sampling Image points ..."
-    pixelVal = sampleImage(rpts, countyCoord[0], processPaths)
-    print pixelVal
 
 
 
