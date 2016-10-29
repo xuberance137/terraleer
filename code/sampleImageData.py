@@ -213,7 +213,7 @@ if __name__ == '__main__':
             countyCoordLimited = [countyCoord[i]]
             yieldValue = yieldVals[year]              
             print "Generating random sampling points in county ..."
-            rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=512, bbox=False, nyear = year)
+            rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=128, bbox=False, nyear = year)
             print "Computing Path/Row for county ..."
             pathrowWRS = findPathRow(countyCoordLimited)
             print "Searching for Landsat Images ..." 
