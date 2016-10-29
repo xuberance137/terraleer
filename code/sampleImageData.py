@@ -202,7 +202,7 @@ if __name__ == '__main__':
     objects = { 'pixelData': [] }
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for i in range(3,4): #len(iowarecs)):
+    for i in range(len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
         yieldVals = countyyield(cname)
