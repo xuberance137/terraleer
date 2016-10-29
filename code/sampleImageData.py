@@ -206,7 +206,7 @@ if __name__ == '__main__':
         yieldVals = countyyield(cname)
 
         for year in range(2015, 2016): 
-
+            print "Data access for: ", cname, " county ID : ", i, " Year : ", year 
             START_DATE = str(year) + '-05-01'
             END_DATE = str(year) + '-08-01'
             CLOUD_MAX = 5.0 #maximum allowed cloud is 5%
