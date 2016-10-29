@@ -172,10 +172,10 @@ def sampleImage(pts, coord, processPath):
                  
 if __name__ == '__main__':
 
-    sf0 = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp")
-    sf1 = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp") #counties in IA
+    #sf0 = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp")
+    #sf1 = shapefile.Reader("../data/Shapefile/IOWA_Counties/IOWA_Counties.shp") #counties in IA
     sf2 = shapefile.Reader("../data/cb_2015_us_county_500k/cb_2015_us_county_500k.shp") #counties in US
-    sf3 = shapefile.Reader("../data/cb_2015_us_state_500k/cb_2015_us_state_500k.shp") # states
+    #sf3 = shapefile.Reader("../data/cb_2015_us_state_500k/cb_2015_us_state_500k.shp") # states
 
     #prototype CDL GEOTIFF file names in data folder
     tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]

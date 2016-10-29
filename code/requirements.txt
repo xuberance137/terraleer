@@ -1,5 +1,6 @@
 landsat-util
 pyshp
+shapely
 numpy
 pycurl
 requests
