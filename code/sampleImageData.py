@@ -154,6 +154,7 @@ def sampleImage(pts, coord, processPath):
         rb = src_ds.GetRasterBand(1)
         gt = src_ds.GetGeoTransform()
         #print gt
+        print "Brand Size : ", rb.XSize, rb.YSize
 
         # adfGeoTransform[0] /* top left x */
         # adfGeoTransform[1] /* w-e pixel resolution */
@@ -167,7 +168,10 @@ def sampleImage(pts, coord, processPath):
             px = int((mx - gt[0]) / gt[1]) #x pixel
             py = int((my - gt[3]) / gt[5]) #y pixel
             #get value from array as numpy uint8 and covert to int16 value
-            pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
+            if px >= rb.XSize or py >= rb.YSize or px < 0 or py < 0:
+                print "[ISSUE ALERT] Exceeding image dimensions when indexing for NDVI image sample"
+            else:
+                pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  
             #print pts[index], px, py, pixels[index]
 
     return pixels
@@ -202,7 +206,7 @@ if __name__ == '__main__':
     objects = { 'pixelData': [] }
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for i in range(len(iowarecs)):
+    for i in range(34, 35): #len(iowarecs)):
         rec = iowarecs[i]
         cname = rec[5].upper().replace("'"," ")
         yieldVals = countyyield(cname)
