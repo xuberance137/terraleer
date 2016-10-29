@@ -27,6 +27,7 @@ GDAL python
 https://pcjericks.github.io/py-gdalogr-cookbook/raster_layers.html
 Obtain Latitude and Longitude from a GeoTIFF File
 http://stackoverflow.com/questions/2922532/obtain-latitude-and-longitude-from-a-geotiff-file
+http://gis.stackexchange.com/questions/6669/converting-projected-geotiff-to-wgs84-with-gdal-and-python
 
 """
 
@@ -137,8 +138,7 @@ def processLandsat(filePaths):
 
 def sampleImage(pts, coord, processPath):
 
-    print "NDVI Image : ", processPath
- 
+    # check for sample point locations 
     for item in pts:
         if item[0] < coord[0] or item[0] > coord[2] or item[1] < coord[1] or item[1] > coord[3]:
             print "[ISSUE ALERT] Sample point out of county boundary ..."
@@ -165,7 +165,8 @@ def sampleImage(pts, coord, processPath):
         mx,my = pts[index][0], pts[index][1] #coord in map units
         px = int((mx - gt[0]) / gt[1]) #x pixel
         py = int((my - gt[3]) / gt[5]) #y pixel
-        pixels.append(rb.ReadAsArray(px,py,1,1)[0][0])
+        #pixels.append(rb.ReadAsArray(px,py,1,1)[0][0])
+        pixels.append(np.int16(rb.ReadAsArray(px,py,1,1)[0][0]).item())  #get value from array as numpy uint8 and covert to int16 value
         #print pts[index], px, py, pixels[index]
     return pixels
 
@@ -204,13 +205,11 @@ if __name__ == '__main__':
         yielddata = countyyield(cname)
         yieldval = zip(yielddata['Year'], yielddata['Value'])
 
-    objects = {
-        'pixelData': [],   
-    }
+    objects = { 'pixelData': [] }
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
     for i in range(1): #range(len(iowarecs)):
-        for year in range(2014, 2016): 
+        for year in range(2000, 2016): 
 
             START_DATE = str(year) + '-05-01'
             END_DATE = str(year) + '-08-01'
@@ -230,11 +229,12 @@ if __name__ == '__main__':
             print "Sampling Image points ..."
             pixelVals = sampleImage(rpts, countyCoord[0], processPaths)
             print "Creating Dictionary ..."
+            print pixelVals, type(pixelVals), type(pixelVals[0])
             objects['pixelData'].append({
                 'year': year,
                 'countyId': i,
                 'samplePoints': rpts,
-                'pixelVal': pixelVals
+                'pixelVals': pixelVals
             })
 
     print "Writing to JSON"
