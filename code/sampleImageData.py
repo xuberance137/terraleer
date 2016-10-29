@@ -142,55 +142,16 @@ def sampleImage(pts, coord, processPath):
         if item[0] < coord[0] or item[0] > coord[2] or item[1] < coord[1] or item[1] > coord[3]:
             print "[ISSUE ALERT] Sample point out of county boundary ..."
 
-    infile_name = '../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF'
-    outfile_name = '../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI_latlon.TIF'
-
+    # Converting from projected (PROJ4) to latlon (WGS84)
+    infile_name = processPath[0]
+    outfile_name = infile_name[:-4] + '_latlom' + infile_name[-4:]
+    #Reference command line
     #gdalwarp ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF ../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI_latlon.TIF -t_srs "+proj=longlat +ellps=WGS84"
-
     call(["gdalwarp", '-t_srs', '+proj=longlat +ellps=WGS84', infile_name, outfile_name])
     
     src_ds = gdal.Open(outfile_name)
     rb = src_ds.GetRasterBand(1)
     gt = src_ds.GetGeoTransform()
-    
-    print rb
-    print gt
-
-    #width = src_ds.RasterXSize
-    #height = src_ds.RasterYSize
-
-    # # get old coordinate system
-    # old_cs= osr.SpatialReference()
-    # old_cs.ImportFromWkt(src_ds.GetProjectionRef())
-    # # create the new coordinate system
-    # wgs84_wkt = """
-    # GEOGCS["WGS 84",
-    #     DATUM["WGS_1984",
-    #         SPHEROID["WGS 84",6378137,298.257223563,
-    #             AUTHORITY["EPSG","7030"]],
-    #         AUTHORITY["EPSG","6326"]],
-    #     PRIMEM["Greenwich",0,
-    #         AUTHORITY["EPSG","8901"]],
-    #     UNIT["degree",0.01745329251994328,
-    #         AUTHORITY["EPSG","9122"]],
-    #     AUTHORITY["EPSG","4326"]]"""
-    # new_cs = osr.SpatialReference()
-    # new_cs .ImportFromWkt(wgs84_wkt)
-    # # create a transform object to convert between coordinate systems
-    # transform = osr.CoordinateTransformation(new_cs, old_cs) 
-
-    #get the point to transform, pixel (0,0) in this case
-    # width = src_ds.RasterXSize
-    # height = src_ds.RasterYSize
-    # gt = src_ds.GetGeoTransform()
-    # minx = gt[0]
-    # miny = gt[3] + width*gt[4] + height*gt[5] 
-
-    #get the coordinates in lat long
-    # latlong = transform.TransformPoint(x,y) 
-
-    pixels = []
-
 
     # adfGeoTransform[0] /* top left x */
     # adfGeoTransform[1] /* w-e pixel resolution */
@@ -198,13 +159,14 @@ def sampleImage(pts, coord, processPath):
     # adfGeoTransform[3] /* top left y */
     # adfGeoTransform[4] /* 0 */
     # adfGeoTransform[5] /* n-s pixel resolution (negative value) */
-
+    pixels = []
     for index in range(len(pts)):   
-        mx,my = pts[index][0], pts[index][1] #transform.TransformPoint(pts[index][0], pts[index][1])  #coord in map units
+        mx,my = pts[index][0], pts[index][1] #coord in map units
         px = int((mx - gt[0]) / gt[1]) #x pixel
         py = int((my - gt[3]) / gt[5]) #y pixel
         pixels.append(rb.ReadAsArray(px,py,1,1)[0][0])
-        print pts[index], px, py, pixels[index]
+        #print pts[index], px, py, pixels[index]
+    return pixels
 
                  
 if __name__ == '__main__':
@@ -250,20 +212,17 @@ if __name__ == '__main__':
     countyCoordLimited = []
     countyCoordLimited.append(countyCoord[0])
     
-    # print "Computing Path/Row for county ..."
-    # pathrowWRS = findPathRow(countyCoordLimited)
-    # print "Searching for Landsat Images ..." 
-    # landsatData = searchLandsat(pathrowWRS)
-    # print "Downloading Landsat Images ..."
-    # filePaths = downloadLandsat(landsatData)
-    # print "Processing Landsat Images ..."
-    # processPaths = processLandsat(filePaths)   
-    
-    # processPaths = ['../data/NDVI/LC80280302015160LGN00/LC80280302015160LGN00_NDVI.TIF']  
-    processPaths = ['../data/sceneData/LC80280302015160LGN00/LC80280302015160LGN00_B1.TIF']
+    print "Computing Path/Row for county ..."
+    pathrowWRS = findPathRow(countyCoordLimited)
+    print "Searching for Landsat Images ..." 
+    landsatData = searchLandsat(pathrowWRS)
+    print "Downloading Landsat Images ..."
+    filePaths = downloadLandsat(landsatData)
+    print "Processing Landsat Images ..."
+    processPaths = processLandsat(filePaths)   
     print "Sampling Image points ..."
-    sampleImage(rpts, countyCoord[0], processPaths)
-
+    pixelVal = sampleImage(rpts, countyCoord[0], processPaths)
+    print pixelVal
 
 
 
