@@ -247,8 +247,8 @@ if __name__ == '__main__':
                 'pixelVals': pixelVals
             })
             print "Cleaning Up sub-folder ..."
-            shutil.rmtree('../data/sceneData')
-            shutil.rmtree('../data/NDVI')
+        shutil.rmtree('../data/sceneData')
+        shutil.rmtree('../data/NDVI')
 
         print "Writing ", year, " JSON ..."
         with open(jsomFileName, 'w') as outfile:
