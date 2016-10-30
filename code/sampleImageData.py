@@ -155,7 +155,7 @@ def sampleImage(pts, coord, processPath):
         rb = src_ds.GetRasterBand(1)
         gt = src_ds.GetGeoTransform()
         #print gt
-        print "Brand Size : ", rb.XSize, rb.YSize
+        #print "Band Size : ", rb.XSize, rb.YSize
 
         # adfGeoTransform[0] /* top left x */
         # adfGeoTransform[1] /* w-e pixel resolution */
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     countyCoord = [item.bbox for item in iowashapes]
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for year in range(2014, 2015): 
+    for year in range(2013, 2014): 
 
         objects = { 'pixelData': [] }
         
