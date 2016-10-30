@@ -246,15 +246,15 @@ if __name__ == '__main__':
                 'samplePoints': rpts,
                 'pixelVals': pixelVals
             })
-            print "Cleaning Up sub-folder ..."
-        shutil.rmtree('../data/sceneData')
-        shutil.rmtree('../data/NDVI')
 
         print "Writing ", year, " JSON ..."
         with open(jsomFileName, 'w') as outfile:
             json.dump(objects, outfile, sort_keys = True, indent = 4)
         outfile.close()
 
+        print "Cleaning Up sub-folder ..."
+        shutil.rmtree('../data/sceneData')
+        shutil.rmtree('../data/NDVI')
 
 
 
