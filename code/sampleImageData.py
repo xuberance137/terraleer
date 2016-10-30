@@ -202,7 +202,7 @@ if __name__ == '__main__':
     countyCoord = [item.bbox for item in iowashapes]
 
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for year in range(2013, 2015): 
+    for year in range(2014, 2015): 
 
         objects = { 'pixelData': [] }
         
