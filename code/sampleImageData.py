@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
         objects = { 'pixelData': [] }
         
-        for i in range(0, 2): #len(iowarecs)):
+        for i in range(len(iowarecs)):
 
             rec = iowarecs[i]
             cname = rec[5].upper().replace("'"," ")
