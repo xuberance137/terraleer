@@ -48,6 +48,7 @@ import osr
 import os
 from subprocess import call
 import json
+import shutil
 
 TEST_RANGE = 2
 DEBUG_PRINT = False
@@ -187,9 +188,6 @@ if __name__ == '__main__':
     #prototype CDL GEOTIFF file names in data folder
     tifnames = ['../data/croppoly/CDL_'+str(y)+'.tif' for y in range(2000,2016)]
 
-    # output JSON
-    jsomFileName = '../data/pixelValues_2015.json'
-
     #reads the shapefile into shapes and records objects
     shps = sf2.shapes()
     recs = sf2.records()
@@ -203,15 +201,17 @@ if __name__ == '__main__':
             iowarecs.append(recs[i])
     countyCoord = [item.bbox for item in iowashapes]
 
-    objects = { 'pixelData': [] }
-
     #identify 1000 points (N) within county shape that have corn data (testval) in each county for a particular year
-    for i in range(len(iowarecs)):
-        rec = iowarecs[i]
-        cname = rec[5].upper().replace("'"," ")
-        yieldVals = countyyield(cname)
+    for year in range(2000, 2016): 
 
-        for year in range(2015, 2016): 
+        objects = { 'pixelData': [] }
+        
+        for i in range(0, 2): #len(iowarecs)):
+
+            rec = iowarecs[i]
+            cname = rec[5].upper().replace("'"," ")
+            yieldVals = countyyield(cname)
+
             print "Data access for: ", cname, " county ID : ", i, " Year : ", year 
             START_DATE = str(year) + '-05-01'
             END_DATE = str(year) + '-08-01'
@@ -222,6 +222,8 @@ if __name__ == '__main__':
             except KeyError, e:
                 print "Missing yield value. Setting to Zero"
                 yieldValue = 0
+            # output JSON
+            jsomFileName = '../data/pixelValues_' + str(year) + '.json'
 
             print "Generating random sampling points in county ..."
             rpts = genimagesamplepoints(iowashapes[i], tifnames, testfunc=True, testval=1, N=128, bbox=False, nyear = year)
@@ -244,11 +246,14 @@ if __name__ == '__main__':
                 'samplePoints': rpts,
                 'pixelVals': pixelVals
             })
+            print "Cleaning Up sub-folder ..."
+            shutil.rmtree('../data/sceneData')
+            shutil.rmtree('../data/NDVI')
 
-    print "Writing to JSON ..."
-    with open(jsomFileName, 'w') as outfile:
-        json.dump(objects, outfile, sort_keys = True, indent = 4)
-    outfile.close()
+        print "Writing ", year, " JSON ..."
+        with open(jsomFileName, 'w') as outfile:
+            json.dump(objects, outfile, sort_keys = True, indent = 4)
+        outfile.close()
 
 
 
