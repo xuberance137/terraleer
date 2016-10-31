@@ -12,7 +12,7 @@ import json
 import pandas as pd
 import seaborn as sns
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn import metrics
 from sklearn.cross_validation import train_test_split
 import os
@@ -112,10 +112,11 @@ def createDataFrameFromMultipleJSON(jsomFileNames):
 	maxVal = []
 
 	for file in jsomFileNames:
-		with open(file) as jsonFile:    
+		with open(file) as jsonFile:  
+			print "Loading pixel values from ", file, " ..."  
 			imagePixels = json.load(jsonFile)
 
-		for index in tqdm(range(len(imagePixels['pixelData']))):
+		for index in range(len(imagePixels['pixelData'])):
 			item = imagePixels['pixelData'][index]
 			if item['yield'] != 0 and item['pixelVals'] != []:
 				countyName.append(item['countyName'])
@@ -166,10 +167,24 @@ def createResidualPlots(y_train, y_test, y_train_pred, y_test_pred):
 def createRegressionModel(df):
 
 	#X = df[['mean', 'std deviation']].values
+	quadratic = PolynomialFeatures(degree=2)
+	cubic = PolynomialFeatures(degree=3)
 	X1 = df['mean'].values
 	X2 = df['std'].values
 	X3 = df['max'].values
-	X = np.vstack((X1, X2, X3)).T
+	X7 = cubic.fit_transform(X1.reshape(-1, 1)) #reshaping since X carries one feature
+	X8 = cubic.fit_transform(X2.reshape(-1, 1))
+	X9 = cubic.fit_transform(X3.reshape(-1, 1))
+	X7 = X7[:, 1:].T
+	X8 = X8[:, 1:].T
+	X9 = X9[:, 1:].T	
+	# for n in range(X1.shape[0]):
+	# 	print X1[n], X7[n,:]
+
+	print len(X1), len(X2), len(X3), len(X7), len(X8), len(X9)  
+	print X1.shape, X2.shape, X3.shape, X7.shape, X8.shape, X9.shape 	
+	#X = np.vstack((X1, X2, X3)).T
+	X = np.vstack((X7, X8, X9)).T
 	y = df['yield'].values 
 	sc_x = StandardScaler()
 	sc_y = StandardScaler()
@@ -331,7 +346,6 @@ if __name__ == '__main__':
 		jsomFileNames.append(jsomFileName)
 
 	df = createDataFrameFromMultipleJSON(jsomFileNames)	
-	createAnalysisPlots(df)
 	model = createRegressionModel(df)
 	plt.show()
 
