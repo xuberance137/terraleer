@@ -101,10 +101,51 @@ def createDataFrame(jsomFileName, yieldValueFileName):
 
 	return df
 
+def createDataFrameFromMultipleJSON(jsomFileNames):
+	
+	countyName = []
+	countyId = []
+	year = []
+	yieldVal = []
+	meanVal = []
+	stdVal = []
+	maxVal = []
+
+	for file in jsomFileNames:
+		with open(file) as jsonFile:    
+			imagePixels = json.load(jsonFile)
+
+		for index in tqdm(range(len(imagePixels['pixelData']))):
+			item = imagePixels['pixelData'][index]
+			if item['yield'] != 0 and item['pixelVals'] != []:
+				countyName.append(item['countyName'])
+				countyId.append(item['countyId'])
+				year.append(item['year'])
+				yieldVal.append(item['yield'])
+				pixelArray = np.array(item['pixelVals'])
+				meanVal.append(np.mean(pixelArray))
+				stdVal.append(np.std(pixelArray))
+				maxVal.append(np.amax(pixelArray))
+
+	df = pd.DataFrame({
+		'countyName' : countyName,
+		'countyId' : countyId,
+		'year' : year,
+		'mean' : meanVal,
+		'std' : stdVal,
+		'max' : maxVal,
+		'yield' : yieldVal 
+		})
+
+	print "Total Number of sample points : ", len(yieldVal)
+
+	return df
+
+
 def createAnalysisPlots(df):
 	
 	sns.set(color_codes = True)
-	cols = ['mean', 'std deviation', 'max histogram', 'yield']
+	cols = ['mean', 'std', 'max', 'yield']
 	sns.pairplot(df[cols])
 
 	plt.figure()
@@ -126,8 +167,9 @@ def createRegressionModel(df):
 
 	#X = df[['mean', 'std deviation']].values
 	X1 = df['mean'].values
-	X2 = df['std deviation'].values
-	X = np.vstack((X1, X2)).T
+	X2 = df['std'].values
+	X3 = df['max'].values
+	X = np.vstack((X1, X2, X3)).T
 	y = df['yield'].values 
 	sc_x = StandardScaler()
 	sc_y = StandardScaler()
@@ -136,23 +178,32 @@ def createRegressionModel(df):
 	#print X1
 
 	slr = LinearRegression()
+	
 	slr.fit(X_std, y_std)
+	
 	y_pred = slr.predict(X_std)
 	
 	X_train, X_test, y_train, y_test = train_test_split(X_std, y_std, test_size=0.3, random_state=0)
+
 	slr.fit(X_train, y_train)
+	
 	y_train_pred = slr.predict(X_train)
 	y_test_pred = slr.predict(X_test)
 
+	print "Model Performance"
+	print "R2            : ", metrics.r2_score(y_std, y_pred)
+	print "R2 In Sample  : ", metrics.r2_score(y_train, y_train_pred)
+	print "R2 Out Sample : ", metrics.r2_score(y_test, y_test_pred)
 	print "Variance : ", metrics.explained_variance_score(y_std, y_pred)
 	print "MSE : ", metrics.mean_squared_error(y_std, y_pred)
-	print "R2 : ", metrics.r2_score(y_std, y_pred)
 	print "MSE Train : ", metrics.mean_squared_error(y_train, y_train_pred)
 	print "MSE Test : ", metrics.mean_squared_error(y_test, y_test_pred)
+	print "Model Parameters"
 	print "Slope : ", slr.coef_
 	print "Intercept : ", slr.intercept_
 
-	createResidualPlots(y_train, y_test, y_train_pred, y_test_pred)
+	# plt.figure()
+	# createResidualPlots(y_train, y_test, y_train_pred, y_test_pred)
 
 	return slr
 
@@ -257,26 +308,32 @@ def plotColorScenes(sceneIDs):
 
 if __name__ == '__main__':
 
-	sf = shapefile.Reader('../data/Shapefile/IOWA_Counties/IOWA_Counties.shp')
-	fileList = cPickle.load(open('../data/ImageFilePaths.p', 'rb'))
-	jsomFileName = '../data/ImageFileStatistics.json'
-	yieldValueFileName = '../data/YieldByCounty2015.txt'
+	# sf = shapefile.Reader('../data/Shapefile/IOWA_Counties/IOWA_Counties.shp')
+	# fileList = cPickle.load(open('../data/ImageFilePaths.p', 'rb'))
+	# jsomFileName = '../data/ImageFileStatistics.json'
+	# yieldValueFileName = '../data/YieldByCounty2015.txt'
 
-	# fig = plt.figure()
-	# plotHistograms(fileList, sf, fig)
+	# # fig = plt.figure()
+	# # plotHistograms(fileList, sf, fig)
+	# # plt.show()
+
+	# computeImageStatistics(fileList, sf, jsomFileName)
+	# df = createDataFrame(jsomFileName, yieldValueFileName)
+	# createAnalysisPlots(df)
+	# model = createRegressionModel(df)
 	# plt.show()
 
-	#computeImageStatistics(fileList, sf, jsomFileName)
-	df = createDataFrame(jsomFileName, yieldValueFileName)
-	# createAnalysisPlots(df)
+	year = [2013, 2014, 2015]
+
+	jsomFileNames = []
+	for y in year:
+		jsomFileName = '../data/pixelValues_' + str(y) + '.json'
+		jsomFileNames.append(jsomFileName)
+
+	df = createDataFrameFromMultipleJSON(jsomFileNames)	
+	createAnalysisPlots(df)
 	model = createRegressionModel(df)
-	#plt.show()
-
-	# f = processSceneBundleToVisual('../data/SceneData')
-	#f = ['LC80240312015212LGN00', 'LC80250302015139LGN00', 'LC80250312015203LGN00', 'LC80250322015203LGN00', 'LC80260302015210LGN00', 'LC80260312015210LGN00', 'LC80260322015194LGN00', 'LC80260322015210LGN00', 'LC80270302015201LGN00', 'LC80270312015201LGN00', 'LC80270322015185LGN00', 'LC80280302015160LGN00', 'LC80280312015160LGN00', 'LC80280312015192LGN00', 'LC80280322015192LGN00', 'LC80290302015199LGN00']
-	#plotColorScenes(f)
-
-
+	plt.show()
 
 
 
