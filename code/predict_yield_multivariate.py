@@ -915,8 +915,8 @@ if __name__ == '__main__':
 
     optimal_data_set = parse_preformance_data(JSON_FILE_NAME)
 
-    #setting to 1 for fast compute
-    #optimal_data_set[0] = 1
+    #setting to 1 for fast compute, else will find optimal based on performance JSON
+    optimal_data_set[0] = 1
     measure_single_model_performance(optimal_data_set)
 
 
