@@ -811,7 +811,7 @@ def measure_single_model_performance(optimal_data_set):
     pred_val = predict_model(Ndata_in, regmod, func=func1a, invfunc=invfunc1a)
     print label_names, len(label_names)
     print 
-    print "In sample, predicting year 2014 "
+    print "In sample, predicting year :", optimal_data_set[1]
     print "R2  : ", r2_score(Ndata_in[1], pred_val)
     print "MSE : ", mean_squared_error(Ndata_in[1], pred_val)
     print "MAE : ", mean_absolute_error(Ndata_in[1], pred_val)
@@ -823,15 +823,19 @@ def measure_single_model_performance(optimal_data_set):
     #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
     #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
     plt.plot(pred_val, color = 'red', label = 'Predicted Yield')
-    plt.plot(Ndata_in[1], color = 'blue', label = 'Actual Yield')              
-    plt.legend()
+    plt.plot(Ndata_in[1], color = 'blue', label = 'Actual Yield')         
+    plt.title('In Sample Prediction for ' + str(optimal_data_set[1]) ) 
+    plt.ylabel('Predicted Yield Values')  
+    plt.xlabel('County IDs')
+    plt.legend(loc='upper left')  
 
-    plt.figure()
-    #plt.bar(np.arange(len(pred_val))*2, pred_val, color = 'red')
-    #plt.bar(np.arange(len(Ndata_2015[1]))*2+1, Ndata_2015[1], color = 'blue')        
+    plt.figure()       
     plt.plot([pred_val[sorted_index[n]] for n in range(len(sorted_index))], color = 'red', label = 'Predicted Yield')
     plt.plot([Ndata_in[1][sorted_index[n]] for n in range(len(sorted_index))], color = 'blue', label = 'Actual Yield')              
-    plt.legend()
+    plt.title('Sorted In Sample Prediction for ' + str(optimal_data_set[1]) ) 
+    plt.ylabel('Predicted Yield Values')  
+    plt.xlabel('Post Sort County IDs')
+    plt.legend(loc='upper left') 
 
     plt.show()  
 
@@ -912,7 +916,7 @@ if __name__ == '__main__':
     optimal_data_set = parse_preformance_data(JSON_FILE_NAME)
 
     #setting to 1 for fast compute
-    optimal_data_set[0] = 1
+    #optimal_data_set[0] = 1
     measure_single_model_performance(optimal_data_set)
 
 
