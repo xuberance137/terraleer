@@ -303,6 +303,22 @@ def processSceneBundleToVisual(sceneDataPath):
 	return subdirectories
 
 
+def regModelPerformance(jsomFileName):
+	
+	OutSampleR2 = []
+
+
+	with open(jsomFileName) as jsonFile:  
+		print "Loading pixel values from ", file, " ..."  
+		regModel = json.load(jsonFile)
+
+	for index in range(len(regModel['reg_model'])):
+		item = regModel['reg_model'][index]
+		OutSampleR2.append(item['OutSampleR2'])
+
+	print "Max Out Sample R2 : ", max(OutSampleR2)
+
+
 def plotColorScenes(sceneIDs):
 
 	processFolder = '../data/processData/'
